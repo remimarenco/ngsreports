@@ -1,0 +1,71 @@
+# convert svn repo into git 
+# http://john.albin.net/git/convert-subversion-to-git
+# http://julipedia.meroh.net/2012/02/converting-subversion-repository-to-git.html
+# https://github.com/nirvdrum/svn2git
+svn co svn+ssh://pajon01@uk-cri-lbio01/data/mib-cri/SVNREP/pipelines/chipseq/trunk/chipseq-build
+cd chipseq-build
+svn log -q | awk -F '|' '/^r/ {sub("^ ", "", $2); sub(" $", "", $2); print $2" = "$2" <"$2">"}' | sort -u > authors.txt
+git svn init svn+ssh://pajon01@uk-cri-lbio01/data/mib-cri/SVNREP/pipelines/chipseq/trunk/chipseq-build --no-metadata  -T trunk
+mv authors.txt ../.
+git config svn.authorsfile ../authors.txt 
+git svn fetch
+cd ..
+git clone chipseq-build git-chipseq-build
+cd git-chipseq-build
+git remote add installer https://github.com/pajanne/chipseq-installer.git
+git push installer master # you may need to use -f to force the first push
+
+# then modify code
+git commit -a -m 'small modif after migration to git from svn'
+git push installer master
+
+# Hello world example
+mkdir hello-world
+cd hello-world
+git init
+touch README
+git add .
+git commit -m "first commit"
+git remote add origin https://github.com/username/projectname.git
+git push origin master
+
+# Survival guide [ideas from http://flanders.co.nz/2009/03/21/gitgithub-survival-guide]
+
+The first tip I can give you and most of what I’ll be talking about is in the guides from github. 
+When you’re used to Subversion you’ll need to make a mental leap. That leap would be to realise 
+that your local copy is the master copy for you. The remote server like github.com is one is a 
+little bit like an afterthought. I think it goes a little bit like this: 
+“O cool I’ve built this really cool thing here and I’ve got it in this git repository on my machine. 
+It would be cool if other people also had access. 
+Wait a minute, I’ll just add a remote and push my stuff onto that server.” Problem solved.
+
+http://blog.tfnico.com/2010/06/distributed-source-control-management.html
+
+Basically, instead of having a single repository on a central server, everyone has their own repository.
+You want to let people work without ruining the main line.
+If you are distributed, branching/merging has to be easy, cause everyone kind of has a branch in their local copy. Every "update" is actually a merge from one repo to another.
+
+git status
+git add .
+git commit -m 'comments'
+git push
+
+When there are changes in the source repository I issue the following commands:
+git co master # Check out the master branch
+git pull ironruby master # Pull in changes from remote
+git co linux # Check out the linux branch
+git merge master # Merge in the changes from the master branch
+mate . # Open textmate to resolve conflicts
+git add . # Add the files with the resolved conflicts back to the repository
+git ci –a –m “Synced with upstream” # submit changes
+git push # update the github server
+
+# Reference Manuel: http://gitref.org/index.html
+
+# github pages
+https://help.github.com/articles/creating-pages-with-the-automatic-generator
+
+# change url
+git remote set-url installer https://github.com/crukci-bioinformatics/chipseq-installer
+
+
