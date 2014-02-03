@@ -1,0 +1,188 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>lab-reports</title>
+	<meta name="generator" content="TextMate http://macromates.com/">
+	<meta name="author" content="Anne Pajon">
+	<!-- Date: 2014-02-03 -->
+	<script src="http://code.jquery.com/jquery-1.9.1.js" type="text/javascript"></script>
+    <script src="highcharts-3.0.9/js/highcharts.js"></script>
+    <script src="highcharts-3.0.9/js/modules/exporting.js"></script>
+
+    <script type="text/javascript">    
+    
+    $(function () {
+            $('#runbytype').highcharts({
+                chart: {
+                    type: 'bar'
+                },
+                title: {
+                    text: 'Usage of Sequencing Runs By Type'
+                },
+                xAxis: {
+                    categories: ['GAIIx_PE100', 'GAIIx_SE36', 'Hiseq_PE100', 'Hiseq_PE101', 'Hiseq_PE4', 'Hiseq_PE75', 'Hiseq_SE100', 'Hiseq_SE36', 'Hiseq_SE40', 'Hiseq_SE50', 'Hiseq_SE75', 'Hiseq_SE99', 'Miseq_00300', 'Miseq_050V2', 'Miseq_150V3', 'Miseq_300V2', 'Miseq_500V2', 'Miseq_600V3']
+                },
+                yAxis: {
+                    min: 0,
+                    max: 100,
+                    title: {
+                        text: '% Usage'
+                    },
+                },
+                legend: {
+                    backgroundColor: '#FFFFFF',
+                    reversed: true
+                },
+                plotOptions: {
+                    series: {
+                        stacking: 'normal'
+                    }
+                },
+                series: [{
+                    name: 'Carroll Group',
+                    data: [0, 52, 0, 0, 0, 0, 0, 30, 25, 0, 0, 0, 9, 44, 50, 17, 0, 0]
+                }, {
+                    name: 'Others',
+                    data: [100, 48, 100, 100, 100, 100, 100, 70, 75, 100, 100, 100, 91, 56, 50, 83, 100, 100]
+                }]
+            });
+        });
+        
+        $(function () {
+            $('#totalcapacity').highcharts({
+                chart: {
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: false
+                },
+                title: {
+                    text: 'Group Share of Total Sequencing Capacity'
+                },
+                tooltip: {
+            	    pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+                },
+                plotOptions: {
+                    pie: {
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: {
+                            enabled: true,
+                            color: '#000000',
+                            connectorColor: '#000000',
+                            format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+                        }
+                    }
+                },
+                series: [{
+                    type: 'pie',
+                    name: 'sequencing share',
+                    data: [
+                        ['Carroll Group', 227],
+                        ['Others', 1573],
+                    ]
+                }]
+            });
+        });
+
+        $(function () {
+            $('#hiseq').highcharts({
+                chart: {
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: false
+                },
+                title: {
+                    text: 'Which members of the Carroll group used the HiSeq?'
+                },
+                tooltip: {
+            	    pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+                },
+                plotOptions: {
+                    pie: {
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: {
+                            enabled: true,
+                            color: '#000000',
+                            connectorColor: '#000000',
+                            format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+                        }
+                    }
+                },
+                series: [{
+                    type: 'pie',
+                    name: 'sequencing share',
+                    data: [
+                    ['Stacey Jamieson', 26],
+                    ['Hisham Mohammed', 39],
+                    ['Aurelien Serandour', 8],
+                    ['Kamila Jozwik', 19],
+                    ['Kelly Holmes', 13],
+                    ['Rosalind Launchbury', 21],
+                    ['Theresa Hickey', 10],
+                    ['Aisling Redmond', 3],
+                    ]
+                }]
+            });
+        });
+
+        $(function () {
+            $('#miseq').highcharts({
+                chart: {
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: false
+                },
+                title: {
+                    text: 'Which members of the Carroll group used the MiSeq?'
+                },
+                tooltip: {
+            	    pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+                },
+                plotOptions: {
+                    pie: {
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: {
+                            enabled: true,
+                            color: '#000000',
+                            connectorColor: '#000000',
+                            format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+                        }
+                    }
+                },
+                series: [{
+                    type: 'pie',
+                    name: 'sequencing share',
+                    data: [
+                    ['Stacey Jamieson', 7],
+                    ['Hisham Mohammed', 6],
+                    ['Aurelien Serandour', 4],
+                    ['Kamila Jozwik', 5],
+                    ['Josh Cohen', 2],
+                    ['Kelly Holmes', 2],
+                    ['Rosalind Launchbury', 9],
+                    ['Theresa Hickey', 2],
+                    ['Aisling Redmond', 9],
+                    ]
+                }]
+            });
+        });
+
+    </script>
+    
+
+</head>
+<body>
+    
+    <h1>NGS Research group reports</h1>
+    <div id="runbytype" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <div id="totalcapacity" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <div id="hiseq" style="min-width: 310px; height: 400px; margin: 0 auto;"></div>
+    <div id="miseq" style="min-width: 310px; height: 400px; margin: 0 auto;"></div>
+    
+</body>
+</html>

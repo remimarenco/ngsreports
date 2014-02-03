@@ -46,7 +46,8 @@ You want to let people work without ruining the main line.
 If you are distributed, branching/merging has to be easy, cause everyone kind of has a branch in their local copy. Every "update" is actually a merge from one repo to another.
 
 git status
-git add .
+git add . # to add eveything
+git add -u # to only add the modified files
 git commit -m 'comments'
 git push
 
