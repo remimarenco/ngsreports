@@ -1,27 +1,36 @@
 -- --------------------------------------------------------------------------------
--- BILLING QUERY - latest version 11-Nov-2013
+-- BILLING QUERY - latest version 31-Jan-2014
+-- against genologics database v2.5.2.367 http://genologics.com/
+-- 31/01/14: add two new UDFs % lost reads and yield
+-- 21/01/14: add avg library length as it can be different over samples in pool
+--           add fields Library Type; Index Type & Average Library Length
+-- 02/07/13: first versions
 -- --------------------------------------------------------------------------------
 
 SELECT distinct
 researcher.firstname || ' ' || researcher.lastname as researcher, 
 lab.name as lab, 
 address.institution as institute,
-sample_udf_view.udfvalue as slxid, 
+sudf1.udfvalue as slxid, 
 itype.name || '_' || case when itype.name = 'Miseq' then split_part(pudf6.udfvalue, '-', 2) else case when pudf2.udfvalue is null then 'SE' else 'PE' end || pudf1.udfvalue end as runtype,
 audf1.udfvalue as billable, 
-to_char(to_date(pudf3.udfvalue, 'YYYY-MM'), 'YYYY-MM') as billingmonth, 
+to_char(process.daterun, 'YYYY-MM') as billingmonth, 
 pudf4.udfvalue as flowcellid, 
 'Lane' || containerplacement.wellyposition + 1 as lane, 
 bpudf1.udfvalue as flowcellbillingcomments,
 audf2.udfvalue as billingcomments,
 pudf5.udfvalue as runfolder, 
 instrument.name as instrument,
-
 to_char(sample.datereceived, 'YYYY-MM-DD') as submissiondate,
 to_char(to_date(pudf3.udfvalue, 'YYYY-MM-DD'), 'YYYY-MM-DD') as completiondate, 
+sudf2.udfvalue as library_type,
+sudf3.udfvalue as index_type,
+to_char(avg(to_number(sudf4.udfvalue, '99999')), '9999.99') as avg_library_length,
 audf3.udfvalue as yield_pf_r1,
 audf4.udfvalue as avg_q_score_r1,
-audf5.udfvalue as Percent_bases_q30_r1,
+audf5.udfvalue as percent_bases_q30_r1,
+audf15.udfvalue as yield,
+audf14.udfvalue as percent_lost_reads,
 audf6.udfvalue as cluster_density_r1,
 audf7.udfvalue as percent_pf_r1,
 audf8.udfvalue as intensity_cycle_1_r1,
@@ -57,16 +66,21 @@ LEFT OUTER JOIN artifact_udf_view as audf9 on (audf9.artifactid=artifact.artifac
 LEFT OUTER JOIN artifact_udf_view as audf10 on (audf10.artifactid=artifact.artifactid AND audf10.udfname = '% Phasing R1')
 LEFT OUTER JOIN artifact_udf_view as audf11 on (audf11.artifactid=artifact.artifactid AND audf11.udfname = '% Prephasing R1')
 LEFT OUTER JOIN artifact_udf_view as audf12 on (audf12.artifactid=artifact.artifactid AND audf12.udfname = '% Aligned R1')
-LEFT OUTER JOIN artifact_udf_view as audf13 on (audf13.artifactid=artifact.artifactid AND audf13.udfname = '% Error Rate R1'), 
+LEFT OUTER JOIN artifact_udf_view as audf13 on (audf13.artifactid=artifact.artifactid AND audf13.udfname = '% Error Rate R1')
+LEFT OUTER JOIN artifact_udf_view as audf14 on (audf14.artifactid=artifact.artifactid AND audf14.udfname = '% Lost Reads')
+LEFT OUTER JOIN artifact_udf_view as audf15 on (audf15.artifactid=artifact.artifactid AND audf15.udfname = 'Yield (Mreads)'), 
 containerplacement, 
 container, 
 artifact_sample_map, 
-sample LEFT OUTER JOIN sample_udf_view on (sample_udf_view.sampleid=sample.sampleid AND sample_udf_view.udfname = 'SLX Identifier'), 
+sample 
+LEFT OUTER JOIN sample_udf_view as sudf1 on (sudf1.sampleid=sample.sampleid AND sudf1.udfname = 'SLX Identifier')
+LEFT OUTER JOIN sample_udf_view as sudf2 on (sudf2.sampleid=sample.sampleid AND sudf2.udfname = 'Library Type')
+LEFT OUTER JOIN sample_udf_view as sudf3 on (sudf3.sampleid=sample.sampleid AND sudf3.udfname = 'Index Type')
+LEFT OUTER JOIN sample_udf_view as sudf4 on (sudf4.sampleid=sample.sampleid AND sudf4.udfname = 'Average Library Length'),
 project, 
 researcher, 
 lab LEFT OUTER JOIN entity_udf_view as ludf1 on (lab.labid=ludf1.attachtoid AND ludf1.udfname='External')
 LEFT OUTER JOIN address on (lab.billingaddressid=address.addressid), 
-
 -- billing process
 process as bprocess LEFT OUTER JOIN process_udf_view as bpudf1 on (bpudf1.processid=bprocess.processid AND bpudf1.udfname = 'Flowcell Billing Comments') ,
 processtype as bprocesstype,
@@ -95,7 +109,7 @@ AND artifact.luid IN (
 	AND sub_process.typeid=sub_processtype.typeid 
 	AND sub_processtype.displayname='Billing' 
 	AND sub_processiotracker.inputartifactid=sub_artifact.artifactid 
-	AND sub_process.daterun >= '2013-04-01' AND sub_process.daterun <= '2013-12-07'
+	AND sub_process.daterun >= '2013-04-01' AND sub_process.daterun <= '2014-02-07'
 ) 
 -- billing process
 AND artifact.luid=bartifact.luid
@@ -103,3 +117,6 @@ AND bprocess.typeid = bprocesstype.typeid
 AND bprocessiotracker.processid=bprocess.processid
 AND bprocessiotracker.inputartifactid=bartifact.artifactid
 AND bprocesstype.displayname='Billing'
+GROUP BY researcher, lab, institute, slxid, runtype, billable, billingmonth, flowcellid, lane, flowcellbillingcomments, billingcomments, runfolder, instrument, submissiondate, completiondate, 
+ library_type, index_type, yield_pf_r1, avg_q_score_r1, percent_bases_q30_r1, yield, percent_lost_reads, cluster_density_r1, percent_pf_r1, 
+ intensity_cycle_1_r1, percent_intensity_cycle_20_r1, percent_phasing_r1, percent_prephasing_r1, percent_aligned_r1, percent_error_rate_r1, external

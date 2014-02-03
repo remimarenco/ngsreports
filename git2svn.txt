@@ -66,6 +66,8 @@ git push # update the github server
 https://help.github.com/articles/creating-pages-with-the-automatic-generator
 
 # change url
-git remote set-url installer https://github.com/crukci-bioinformatics/chipseq-installer
+git remote set-url installer https://github.com/crukci-bioinformatics/chipseq-installer.git
+
+git remote set-url origin https://github.com/pajanne/ngsreports.git
 
 
