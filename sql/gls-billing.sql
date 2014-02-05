@@ -109,7 +109,7 @@ AND artifact.luid IN (
 	AND sub_process.typeid=sub_processtype.typeid 
 	AND sub_processtype.displayname='Billing' 
 	AND sub_processiotracker.inputartifactid=sub_artifact.artifactid 
-	AND sub_process.daterun >= '2013-04-01' AND sub_process.daterun <= '2014-02-07'
+	AND sub_process.daterun >= '2013-04-01' AND sub_process.daterun <= 'BILLING-DATE'
 ) 
 -- billing process
 AND artifact.luid=bartifact.luid

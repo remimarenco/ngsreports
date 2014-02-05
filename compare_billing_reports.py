@@ -14,8 +14,8 @@ import argparse
 def main():
     # get the options
     parser = argparse.ArgumentParser()
-    parser.add_argument("--report1", dest="report1", action="store", help="path to billing report 1 '/path/to/billing/report/billingreport_Apr2Nov.csv'", required=True)
-    parser.add_argument("--report2", dest="report2", action="store", help="path to billing report 2 '/path/to/billing/report/billingreport_Apr2Dec.csv'", required=True)
+    parser.add_argument("--last-report", dest="report1", action="store", help="path to last billing report '/path/to/billing/report/201401-billing.csv'", required=True)
+    parser.add_argument("--this-report", dest="report2", action="store", help="path to this billing report '/path/to/billing/report/201402-billing.csv'", required=True)
     options = parser.parse_args()
     
     data1 = create_report_from_file(options.report1)
@@ -42,17 +42,22 @@ def main():
     new_flowcells = defaultdict(list)
     all_flowcells = defaultdict(list)
     print "--------------------------------------------------------------------------------"
-    print "-- NEW flow-cells in %s NOT FOUND in %s" % (options.report2, options.report1)
+    print "-- ***WARNING*** more than one entry found in %s for these flow-cells" % (options.report2)
     print "--------------------------------------------------------------------------------"
     for key, value in data2.iteritems():
-        content = value.split(';')
+        content = value[0].split(';')
+        if len(value) > 1:
+            print key, value
         all_flowcells[content[3]].append("%s_%s" % (key, content[0]))
         if not key in data1.keys():
             new_flowcells[content[3]].append("%s_%s" % (key, content[0]))
 
+    print "--------------------------------------------------------------------------------"
+    print "-- NEW flow-cells in %s NOT FOUND in %s" % (options.report2, options.report1)
+    print "--------------------------------------------------------------------------------"
     for fc, value in new_flowcells.iteritems():
         print fc, value
-
+"""
     print "================================================================================"
     wrong_fc = defaultdict(list)
     print "--------------------------------------------------------------------------------"
@@ -74,7 +79,7 @@ def main():
     for fc, value in wrong_fc.iteritems():
         print fc, value
     
-"""
+
     print "--------------------------------------------------------------------------------"
     print "-- lanes in %s NOT FOUND in %s with billing month NOT EQUAL to 2013-12" % (options.report2, options.report1)
     print "--------------------------------------------------------------------------------"
@@ -103,7 +108,7 @@ def create_report_from_file(file_report):
             content = line.strip().replace('"','').split(';')
             if not content[7] in 'flowcellid':
                 key = "%s_%s" % (content[7], content[8])
-                data[key] = ';'.join(content[3:6] + content[7:9])
+                data[key].append(';'.join(content[3:6] + content[7:9]))
     return data
         
 
