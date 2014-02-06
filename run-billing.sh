@@ -5,7 +5,7 @@ TEMPLATE=$BASEDIR/sql/gls-billing.sql
 QUERY=$BASEDIR/billing/$(date +%Y%m)-billing.sql
 CSVOUT=$BASEDIR/billing/$(date +%Y%m)-billing.csv
 LASTCVSOUT=$BASEDIR/billing/$(date --date="$(date +%Y-%m-15) -1 month" +%Y%m)-billing.csv
-COMPAREOUT=$BASEDIR/billing/$(gdate +%Y%m)-compare-reports.out
+COMPAREOUT=$BASEDIR/billing/$(date +%Y%m)-compare-reports.out
 
 export PGPASSWORD=readonly
 
