@@ -20,85 +20,48 @@ def main():
     
     data1 = create_report_from_file(options.report1)
     data2 = create_report_from_file(options.report2)
-    
+    print "================================================================================"
+    print "LAST REPORT vs THIS REPORT"
     print "--------------------------------------------------------------------------------"
-    print "-- lanes in %s NOT FOUND in %s" % (options.report1, options.report2)
+    print "-- key [flowcellid_lane] in LAST %s NOT FOUND in THIS %s" % (options.report1, options.report2)
     print "--------------------------------------------------------------------------------"
     for key, value in data1.iteritems():
         if not key in data2.keys():
             print key
             
     print "--------------------------------------------------------------------------------"
-    print "-- lanes in %s DO NOT MATCH in %s" % (options.report1, options.report2)
+    print "-- for key with value ['SLXID;run_type;billing_status;flowcellid;lane]" 
+    print "-- in LAST %s DO NOT MATCH in THIS %s" % (options.report1, options.report2)
     print "--------------------------------------------------------------------------------"
     for key, value in data1.iteritems():
         if key in data2.keys():
             if not value == data2[key]:
                 print '---'
-                print value
-                print data2[key]
+                print 'LAST: %s' % value
+                print 'THIS: %s' % data2[key]
 
     print "================================================================================"
+    print "THIS REPORT %s" % options.report2
     new_flowcells = defaultdict(list)
-    all_flowcells = defaultdict(list)
     print "--------------------------------------------------------------------------------"
-    print "-- ***WARNING*** more than one entry found in %s for these flow-cells" % (options.report2)
+    print "-- ***WARNING*** more than one entry found in %s for these lanes" % (options.report2)
     print "--------------------------------------------------------------------------------"
     for key, value in data2.iteritems():
         content = value[0].split(';')
         if len(value) > 1:
             print key, value
-        all_flowcells[content[3]].append("%s_%s" % (key, content[0]))
         if not key in data1.keys():
-            new_flowcells[content[3]].append("%s_%s" % (key, content[0]))
+            new_flowcells[content[3]].append(value) 
 
     print "--------------------------------------------------------------------------------"
-    print "-- NEW flow-cells in %s NOT FOUND in %s" % (options.report2, options.report1)
+    print "-- NEW lanes in %s NOT FOUND in %s to bill this month" % (options.report2, options.report1)
     print "--------------------------------------------------------------------------------"
+    i = 0
     for fc, value in new_flowcells.iteritems():
-        print fc, value
-"""
-    print "================================================================================"
-    wrong_fc = defaultdict(list)
-    print "--------------------------------------------------------------------------------"
-    print "-- WRONG number of lanes in flow-cells in %s" % (options.report2)
-    print "--------------------------------------------------------------------------------"
-    for fc, value in all_flowcells.iteritems():
-        if fc.startswith('000000000') or fc.startswith('A'):
-            if not len(value) == 1:
-                wrong_fc[fc] = len(value)
-        elif fc.startswith('C') or fc.startswith('D') or fc.startswith('6'):
-            if not len(value) == 8:
-                wrong_fc[fc] = len(value)
-        elif fc.startswith('H'):
-            if not len(value) == 2:
-                wrong_fc[fc] = len(value)
-        else:
-            wrong_fc[fc] = len(value)
-        
-    for fc, value in wrong_fc.iteritems():
-        print fc, value
-    
+        for item in value:
+            i += 1
+            print i, item
 
-    print "--------------------------------------------------------------------------------"
-    print "-- lanes in %s NOT FOUND in %s with billing month NOT EQUAL to 2013-12" % (options.report2, options.report1)
-    print "--------------------------------------------------------------------------------"
-    for key, value in data2.iteritems():
-        if not key in data1.keys():
-            content = value.split(';')
-            if not content[5] == '2013-12':
-                print key, value
-
-    print "--------------------------------------------------------------------------------"
-    print "-- lanes in %s NOT FOUND in %s with billing month EQUAL to 2013-12" % (options.report2, options.report1)
-    print "--------------------------------------------------------------------------------"
-    for key, value in data2.iteritems():
-        if not key in data1.keys():
-            content = value.split(';')
-            if content[5] == '2013-12':
-                print key, value
-"""    
-    
 def create_report_from_file(file_report):
     # file format
     # "researcher";"lab";"institute";"slxid"***;"runtype"***;"billable"***;"billingmonth";"flowcellid"***;"lane"***;
@@ -111,8 +74,6 @@ def create_report_from_file(file_report):
                 data[key].append(';'.join(content[3:6] + content[7:9]))
     return data
         
-
-
 if __name__ == '__main__':
     main()
 
