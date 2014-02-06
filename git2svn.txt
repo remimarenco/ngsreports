@@ -71,4 +71,7 @@ git remote set-url installer https://github.com/crukci-bioinformatics/chipseq-in
 
 git remote set-url origin https://github.com/pajanne/ngsreports.git
 
+# if git push returns Gtk-WARNING **: cannot open display:
+unset SSH_ASKPASS # on sol03 after 
+
 
