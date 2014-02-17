@@ -25,6 +25,7 @@ def main():
     all_groups = set()
     lab_member_hiseq_usage = defaultdict(lambda : defaultdict(int))
     lab_member_miseq_usage = defaultdict(lambda : defaultdict(int))
+    billing_table_by_group = defaultdict(str)
     
     with open (os.path.join('js', 'group-report-template.html'), "r") as f:
         template=f.read()
@@ -32,11 +33,12 @@ def main():
     for key, value in data.iteritems():
         contents = value.split(';')
         sequencing_by_runtype[contents[4]][contents[1]] += 1
+        billing_table_by_group[contents[1]] += '[ "%s", "%s", "%s", "%s", "%s" , "%s"],' % (contents[0], contents[3], contents[4], contents[5], contents[6], contents[8])
         all_groups.add(contents[1])
         if contents[4].startswith('Hiseq'):
-            lab_member_hiseq_usage[contents[1]][contents[0]] += 1
+            lab_member_hiseq_usage[contents[1]][contents[0]] += int(contents[7])
         elif contents[4].startswith('Miseq'):
-            lab_member_miseq_usage[contents[1]][contents[0]] += 1
+            lab_member_miseq_usage[contents[1]][contents[0]] += int(contents[7])
 
     print "================================================================================"
     categories = sorted(sequencing_by_runtype.keys())
@@ -65,15 +67,24 @@ def main():
         miseq = ''
         for key in lab_member_miseq_usage[group].keys():
             miseq += "['%s', %s]," % (key, lab_member_miseq_usage[group][key])
+            
+        billing_table = billing_table_by_group[group]
+        """    { "sTitle": "Researcher" },
+            { "sTitle": "SLX-ID" },
+            { "sTitle": "Run type" },
+            { "sTitle": "Flow-cell"},
+            { "sTitle": "Lane"},
+            { "sTitle": "Billing comments"}"""
+        
         filename = options.date + '-' + group.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
         print filename
         f = open(os.path.join('groups', filename),'w')
-        f.write(string.Template(template).safe_substitute({'categories': categories, 'group': group, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq}))
+        f.write(string.Template(template).safe_substitute({'categories': categories, 'group': group, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
         f.close()
 
 def create_report_from_file(file_report, month):
     # file format
-    # "researcher***";"lab***";"institute***";"slxid"***;"runtype"***;"billable";"billingmonth";"flowcellid"***;"lane"***;
+    # "researcher***";"lab***";"institute***";"slxid"***;"runtype"***;"billable";"billingmonth";"flowcellid"***;"lane"***;flowcellbillingcomments;billingcomments***
     data = defaultdict(list)
     with open (file_report, "U") as f:
         for line in f.readlines():
@@ -81,10 +92,24 @@ def create_report_from_file(file_report, month):
             if not content[7] in 'flowcellid':
                 if content[6] == month:
                     key = "%s_%s_%s" % (content[7], content[8], content[3])
-                    data[key] = ';'.join(content[0:5] + content[7:9])
+                    runtype = content[4].split('_')
+                    cycles = convert_runtype_into_cycles(runtype)
+                    data[key] = ';'.join(content[0:4] + [content[4].replace('V3','')] + content[7:9] + [str(cycles), content[10]])
     return data
         
-
+def convert_runtype_into_cycles(runtype):
+    if runtype[0] == 'Hiseq':
+        if runtype[1].startswith('SE'):
+            return int(runtype[1][2:])
+        elif runtype[1].startswith('PE'):
+            return int(runtype[1][2:])*2
+    elif runtype[0] == 'Miseq':
+        if runtype[1].endswith('V3'):
+            return int(runtype[1][:-2])
+        else:
+            return int(runtype[1])
+    else:
+        return int(runtype[1])
 
 if __name__ == '__main__':
     main()
