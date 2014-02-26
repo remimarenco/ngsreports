@@ -108,8 +108,8 @@ def parse_billing_report(file_report, with_extra=False):
 def send_email(lane_number, files):    
     msg = MIMEMultipart()
     send_from = ANNE
-    #send_to = [ANNE, JAMES, SARAH]
-    send_to = [ANNE]
+    send_to = [ANNE, JAMES, SARAH]
+    #send_to = [ANNE]
 
     msg['Subject'] = 'Automatic Billing Report Notification'
     msg['From'] = ANNE
