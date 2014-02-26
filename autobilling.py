@@ -119,7 +119,7 @@ def send_email(lane_number, files):
     Please find attached the billing report and its comparison with the one from last month.
     All billing reports can be found here: http://uk-cri-lsol03.crnet.org:8080/solexa/home/mib-cri/solexa/ngsreports/billing/
     
-    Group reports are also available from here: http://uk-cri-lsol03.crnet.org:8080/solexa//home/mib-cri/solexa/ngsreports/groups/
+    Group reports: http://uk-cri-lsol03.crnet.org:8080/solexa//home/mib-cri/solexa/ngsreports/groups/
     --
     Anne Pajon, CRI Bioinformatics Core
     anne.pajon@cruk.cam.ac.uk | +44 (0)1223 769 631
