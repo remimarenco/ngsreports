@@ -23,6 +23,7 @@ pudf5.udfvalue as runfolder,
 instrument.name as instrument,
 to_char(sample.datereceived, 'YYYY-MM-DD') as submissiondate,
 to_char(to_date(pudf3.udfvalue, 'YYYY-MM-DD'), 'YYYY-MM-DD') as completiondate, 
+sudf5.udfvalue as billing_code,
 sudf2.udfvalue as library_type,
 sudf3.udfvalue as index_type,
 to_char(avg(to_number(sudf4.udfvalue, '99999')), '9999.99') as avg_library_length,
@@ -76,7 +77,8 @@ sample
 LEFT OUTER JOIN sample_udf_view as sudf1 on (sudf1.sampleid=sample.sampleid AND sudf1.udfname = 'SLX Identifier')
 LEFT OUTER JOIN sample_udf_view as sudf2 on (sudf2.sampleid=sample.sampleid AND sudf2.udfname = 'Library Type')
 LEFT OUTER JOIN sample_udf_view as sudf3 on (sudf3.sampleid=sample.sampleid AND sudf3.udfname = 'Index Type')
-LEFT OUTER JOIN sample_udf_view as sudf4 on (sudf4.sampleid=sample.sampleid AND sudf4.udfname = 'Average Library Length'),
+LEFT OUTER JOIN sample_udf_view as sudf4 on (sudf4.sampleid=sample.sampleid AND sudf4.udfname = 'Average Library Length')
+LEFT OUTER JOIN sample_udf_view as sudf5 on (sudf5.sampleid=sample.sampleid AND sudf5.udfname = 'Billing Information'),
 project, 
 researcher, 
 lab LEFT OUTER JOIN entity_udf_view as ludf1 on (lab.labid=ludf1.attachtoid AND ludf1.udfname='External')
@@ -118,5 +120,5 @@ AND bprocessiotracker.processid=bprocess.processid
 AND bprocessiotracker.inputartifactid=bartifact.artifactid
 AND bprocesstype.displayname='Billing'
 GROUP BY researcher, lab, institute, slxid, runtype, billable, billingmonth, flowcellid, lane, flowcellbillingcomments, billingcomments, runfolder, instrument, submissiondate, completiondate, 
- library_type, index_type, yield_pf_r1, avg_q_score_r1, percent_bases_q30_r1, yield, percent_lost_reads, cluster_density_r1, percent_pf_r1, 
+ billing_code, library_type, index_type, yield_pf_r1, avg_q_score_r1, percent_bases_q30_r1, yield, percent_lost_reads, cluster_density_r1, percent_pf_r1, 
  intensity_cycle_1_r1, percent_intensity_cycle_20_r1, percent_phasing_r1, percent_prephasing_r1, percent_aligned_r1, percent_error_rate_r1, external
