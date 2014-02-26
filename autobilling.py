@@ -107,6 +107,7 @@ def parse_billing_report(file_report, with_extra=False):
     
 def send_email(lane_number, files):    
     msg = MIMEMultipart()
+    send_from = ANNE
     #send_to = [ANNE, JAMES, SARAH]
     send_to = [ANNE]
 
@@ -131,7 +132,7 @@ def send_email(lane_number, files):
         msg.attach(part)
 
     s = smtplib.SMTP('localhost')
-    s.sendmail(me, send_to, msg.as_string())
+    s.sendmail(send_from, send_to, msg.as_string())
     s.quit()
 
         
