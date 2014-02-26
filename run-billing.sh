@@ -9,7 +9,7 @@ COMPAREOUT=$BASEDIR/billing/$(date +%Y%m)-compare-reports.out
 
 export PGPASSWORD=readonly
 
-if ( sed 's/BILLING-DATE/'$(date +%Y-%m-%d)'/g' $TEMPLATE > $QUERY )
+if ( sed 's/BILLING-DATE/'$(date +%Y-%m-05)'/g' $TEMPLATE > $QUERY )
     then
     # billing report
     psql -h lims -U readonly -d "clarityDB"  -c "COPY ( `cat $QUERY` ) TO STDOUT WITH DELIMITER AS ';' CSV HEADER " > $CSVOUT || echo 'ERROR: Unable to run $QUERY' > $CSVOUT
