@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-lab_reports.py
+group_reports.py
 
 Created by Anne Pajon on 2014-01-31.
-Copyright (c) 2014 __MyCompanyName__. All rights reserved.
 """
 import sys
 import os
@@ -17,9 +16,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--report", dest="report", action="store", help="path to billing report '/path/to/billing/report/201402-billing.csv'", required=True)
     parser.add_argument("--date", dest="date", action="store", help="date to produce group reports e.g. '2014-01'", required=True)
+    parser.add_argument("--outputdir", dest="outputdir", action="store", help="path to the output group folder '/path/to/billing/groups'", required=True)
     options = parser.parse_args()
     
-    data = create_report_from_file(options.report, options.date)
+    data = parse_billing_report(options.report, options.date)
     
     sequencing_by_runtype = defaultdict(lambda : defaultdict(int))
     all_groups = set()
@@ -78,11 +78,11 @@ def main():
         
         filename = options.date + '-' + group.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
         print filename
-        f = open(os.path.join('groups', filename),'w')
+        f = open(os.path.join(options.outputdir, 'groups', filename),'w')
         f.write(string.Template(template).safe_substitute({'categories': categories, 'group': group, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
         f.close()
 
-def create_report_from_file(file_report, month):
+def parse_billing_report(file_report, month):
     # file format
     # "researcher***";"lab***";"institute***";"slxid"***;"runtype"***;"billable";"billingmonth";"flowcellid"***;"lane"***;flowcellbillingcomments;billingcomments***
     data = defaultdict(list)
