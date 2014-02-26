@@ -84,7 +84,7 @@ def main():
     
     # send report by email
     if options.email:
-        send_email(i, [options.last_month_report, options.output])
+        send_email(i, [options.this_month_report, options.output])
 
 def parse_billing_report(file_report, with_extra=False):
     # file format
@@ -116,10 +116,10 @@ def send_email(lane_number, files):
     msg['To'] = ','.join(send_to)
     msg.attach( MIMEText("""
     There are %s new lanes in this month billing report.
-    Please find attached the billing report and its comparison with last month one.
+    Please find attached the billing report and its comparison with the one from last month.
     All billing reports can be found here: http://uk-cri-lsol03.crnet.org:8080/solexa/home/mib-cri/solexa/ngsreports/billing/
     
-    Group reports are available too: http://uk-cri-lsol03.crnet.org:8080/solexa//home/mib-cri/solexa/ngsreports/groups/
+    Group reports are also available from here: http://uk-cri-lsol03.crnet.org:8080/solexa//home/mib-cri/solexa/ngsreports/groups/
     --
     Anne Pajon, CRI Bioinformatics Core
     anne.pajon@cruk.cam.ac.uk | +44 (0)1223 769 631
