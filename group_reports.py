@@ -16,7 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--report", dest="report", action="store", help="path to billing report '/path/to/billing/report/201402-billing.csv'", required=True)
     parser.add_argument("--date", dest="date", action="store", help="date to produce group reports e.g. '2014-01'", required=True)
-    parser.add_argument("--outputdir", dest="outputdir", action="store", help="path to the output group folder '/path/to/billing/groups'", required=True)
+    parser.add_argument("--outputdir", dest="outputdir", action="store", help="path to the output folder '/path/to/billing/'", required=True)
     options = parser.parse_args()
     
     data = parse_billing_report(options.report, options.date)
@@ -27,7 +27,7 @@ def main():
     lab_member_miseq_usage = defaultdict(lambda : defaultdict(int))
     billing_table_by_group = defaultdict(str)
     
-    with open (os.path.join('js', 'group-report-template.html'), "r") as f:
+    with open (os.path.join(os.path.realpath(__file__), 'js', 'group-report-template.html'), "r") as f:
         template=f.read()
 
     for key, value in data.iteritems():
