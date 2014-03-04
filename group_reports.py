@@ -27,7 +27,7 @@ def main():
     lab_member_miseq_usage = defaultdict(lambda : defaultdict(int))
     billing_table_by_group = defaultdict(str)
     
-    with open (os.path.join(os.path.realpath(__file__), 'js', 'group-report-template.html'), "r") as f:
+    with open (os.path.join(os.path.dirname(__file__), 'js', 'group-report-template.html'), "r") as f:
         template=f.read()
 
     for key, value in data.iteritems():
