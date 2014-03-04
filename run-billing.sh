@@ -12,8 +12,8 @@ export PGPASSWORD=readonly
 if ( sed 's/BILLING-DATE/'$(date +%Y-%m-05)'/g' $TEMPLATE > $QUERY )
     then
     # billing report
-    psql -h lims -U readonly -d "clarityDB"  -c "COPY ( `cat $QUERY` ) TO STDOUT WITH DELIMITER AS ';' CSV HEADER " > $CSVOUT || echo 'ERROR: Unable to run $QUERY' > $CSVOUT
-    # test - quick/simple query: psql -h lims -U readonly -d "clarityDB"  -c "COPY ( select * from researcher ) TO STDOUT WITH DELIMITER AS ';' CSV HEADER " > $CSVOUT
+    psql -h lims -U readonly -d "clarityDB"  -c "COPY ( `cat $QUERY` ) TO STDOUT WITH DELIMITER AS E'\t' CSV HEADER " > $CSVOUT || echo 'ERROR: Unable to run $QUERY' > $CSVOUT
+    # test - quick/simple query: psql -h lims -U readonly -d "clarityDB"  -c "COPY ( select * from researcher ) TO STDOUT WITH DELIMITER AS E'\t' CSV HEADER " > $CSVOUT
     # group reports
     python $BASEDIR/group_reports.py --report=$CSVOUT --date=$(date --date="$(date +%Y-%m-15) -1 month" +%Y-%m) --outputdir=$BASEDIR
     # billing report comparison & email notification

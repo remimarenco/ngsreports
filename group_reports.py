@@ -31,7 +31,7 @@ def main():
         template=f.read()
 
     for key, value in data.iteritems():
-        contents = value.split(';')
+        contents = value.split('\t')
         sequencing_by_runtype[contents[4]][contents[1]] += 1
         billing_table_by_group[contents[1]] += '[ "%s", "%s", "%s", "%s", "%s" , "%s"],' % (contents[0], contents[3], contents[4], contents[5], contents[6], contents[8])
         all_groups.add(contents[1])
@@ -84,17 +84,17 @@ def main():
 
 def parse_billing_report(file_report, month):
     # file format
-    # "researcher***";"lab***";"institute***";"slxid"***;"runtype"***;"billable";"billingmonth";"flowcellid"***;"lane"***;flowcellbillingcomments;billingcomments***
+    # "researcher***"\t"lab***"\t"institute***"\t"slxid"***\t"runtype"***\t"billable"\t"billingmonth"\t"flowcellid"***\t"lane"***\tflowcellbillingcomments\tbillingcomments***
     data = defaultdict(list)
     with open (file_report, "U") as f:
         for line in f.readlines():
-            content = line.strip().replace('"','').split(';')
+            content = line.strip().replace('"','').split('\t')
             if not content[7] in 'flowcellid':
                 if content[6] == month:
                     key = "%s_%s_%s" % (content[7], content[8], content[3])
                     runtype = content[4].split('_')
                     cycles = convert_runtype_into_cycles(runtype)
-                    data[key] = ';'.join(content[0:4] + [content[4].replace('V3','')] + content[7:9] + [str(cycles), content[10]])
+                    data[key] = '\t'.join(content[0:4] + [content[4].replace('V3','')] + content[7:9] + [str(cycles), content[10]])
     return data
         
 def convert_runtype_into_cycles(runtype):

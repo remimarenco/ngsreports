@@ -48,7 +48,7 @@ def main():
             print >>output, key
             
     print >>output, "--------------------------------------------------------------------------------"
-    print >>output, "-- for key with value ['SLXID;run_type;billing_status;billing_month;flowcellid;lane]" 
+    print >>output, "-- for key with value ['SLXID\trun_type\tbilling_status\tbilling_month\tflowcellid\tlane]" 
     print >>output, "-- in LAST %s DO NOT MATCH in THIS %s" % (options.last_month_report, options.this_month_report)
     print >>output, "--------------------------------------------------------------------------------"
     for key, value in last_month_data.iteritems():
@@ -65,7 +65,7 @@ def main():
     print >>output, "-- ***WARNING*** more than one entry found in %s for these lanes" % (options.last_month_report)
     print >>output, "--------------------------------------------------------------------------------"
     for key, value in this_month_data.iteritems():
-        content = value[0].split(';')
+        content = value[0].split('\t')
         if len(value) > 1:
             print >>output, key, value
         if not key in last_month_data.keys():
@@ -88,21 +88,21 @@ def main():
 
 def parse_billing_report(file_report, with_extra=False):
     # file format
-    # 0:"researcher";1:"lab";2:"institute";3:"slxid"***;4:"runtype"***;5:"billable"***;6:"billingmonth";7:"flowcellid"***;8:"lane"***;
+    # 0:"researcher"\t1:"lab"\t2:"institute"\t3:"slxid"***\t4:"runtype"***\t5:"billable"***\t6:"billingmonth"\t7:"flowcellid"***\t8:"lane"***\t
     
-    # 0researcher;1lab;2institute;3slxid;4runtype;5billable;6billingmonth;7flowcellid;8lane;9flowcellbillingcomments;10billingcomments;11runfolder;12instrument;13submissiondate;14completiondate;
+    # 0researcher\t1lab\t2institute\t3slxid\t4runtype\t5billable\t6billingmonth\t7flowcellid\t8lane\t9flowcellbillingcomments\t10billingcomments\t11runfolder\t12instrument\t13submissiondate\t14completiondate\t
     data = defaultdict(list)
     with open (file_report, "U") as f:
         for line in f.readlines():
-            content = line.strip().replace('"','').split(';')
+            content = line.strip().replace('"','').split('\t')
             if not content[7] in 'flowcellid':
                 key = "%s_%s" % (content[7], content[8])
-                data[key].append(';'.join(content[3:7] + content[7:9]))
+                data[key].append('\t'.join(content[3:7] + content[7:9]))
                 if with_extra:
                     if content[13] == '':
-                        print 'NODATE: %s:%s' % (key, ';'.join(content[3:7] + content[7:9]))
+                        print 'NODATE: %s:%s' % (key, '\t'.join(content[3:7] + content[7:9]))
                     else:
-                        print '  date: %s:%s' % (key, ';'.join(content[3:7] + content[7:9]))
+                        print '  date: %s:%s' % (key, '\t'.join(content[3:7] + content[7:9]))
     return data
     
 def send_email(lane_number, files):    
