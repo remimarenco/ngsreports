@@ -48,7 +48,7 @@ def main():
             print >>output, key
             
     print >>output, "--------------------------------------------------------------------------------"
-    print >>output, "-- for key with value ['SLXID\trun_type\tbilling_status\tbilling_month\tflowcellid\tlane]" 
+    print >>output, "-- for key with value ['SLXID;run_type;billing_status;billing_month;flowcellid;lane]" 
     print >>output, "-- in LAST %s DO NOT MATCH in THIS %s" % (options.last_month_report, options.this_month_report)
     print >>output, "--------------------------------------------------------------------------------"
     for key, value in last_month_data.iteritems():
@@ -65,7 +65,7 @@ def main():
     print >>output, "-- ***WARNING*** more than one entry found in %s for these lanes" % (options.last_month_report)
     print >>output, "--------------------------------------------------------------------------------"
     for key, value in this_month_data.iteritems():
-        content = value[0].split('\t')
+        content = value[0].split(';')
         if len(value) > 1:
             print >>output, key, value
         if not key in last_month_data.keys():
@@ -97,12 +97,12 @@ def parse_billing_report(file_report, with_extra=False):
             content = line.strip().replace('"','').split('\t')
             if not content[7] in 'flowcellid':
                 key = "%s_%s" % (content[7], content[8])
-                data[key].append('\t'.join(content[3:7] + content[7:9]))
+                data[key].append(';'.join(content[3:7] + content[7:9]))
                 if with_extra:
                     if content[13] == '':
-                        print 'NODATE: %s:%s' % (key, '\t'.join(content[3:7] + content[7:9]))
+                        print 'NODATE: %s:%s' % (key, ';'.join(content[3:7] + content[7:9]))
                     else:
-                        print '  date: %s:%s' % (key, '\t'.join(content[3:7] + content[7:9]))
+                        print '  date: %s:%s' % (key, ';'.join(content[3:7] + content[7:9]))
     return data
     
 def send_email(lane_number, files):    
