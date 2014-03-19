@@ -33,7 +33,7 @@ def main():
     for key, value in data.iteritems():
         contents = value.split('\t')
         sequencing_by_runtype[contents[4]][contents[1]] += 1
-        billing_table_by_group[contents[1]] += '[ "%s", "%s", "%s", "%s", "%s" , "%s"],' % (contents[0], contents[3], contents[4], contents[5], contents[6], contents[8])
+        billing_table_by_group[contents[1]] += '[ "%s", "%s", "%s", "%s", "%s" , "%s", "%s"],' % (contents[0], contents[3], contents[4], contents[5], contents[6], contents[10], contents[9])
         all_groups.add(contents[1])
         if contents[4].startswith('Hiseq'):
             lab_member_hiseq_usage[contents[1]][contents[0]] += int(contents[7])
@@ -95,7 +95,7 @@ def parse_billing_report(file_report, month):
                     key = "%s_%s_%s" % (content[7], content[8], content[3])
                     runtype = content[4].split('_')
                     cycles = convert_runtype_into_cycles(runtype)
-                    data[key] = '\t'.join(content[0:4] + [content[4].replace('V3','')] + content[7:9] + [str(cycles), content[10], content[5]])
+                    data[key] = '\t'.join(content[0:4] + [content[4].replace('V3','').replace('V2','')] + content[7:9] + [str(cycles), content[10], content[5], '%.0f' % float(content[22])])
     return data
         
 def convert_runtype_into_cycles(runtype):
@@ -104,8 +104,13 @@ def convert_runtype_into_cycles(runtype):
             return int(runtype[1][2:])
         elif runtype[1].startswith('PE'):
             return int(runtype[1][2:])*2
+    elif runtype[0] == 'GAIIx':
+        if runtype[1].startswith('SE'):
+            return int(runtype[1][2:])
+        elif runtype[1].startswith('PE'):
+            return int(runtype[1][2:])*2
     elif runtype[0] == 'Miseq':
-        if runtype[1].endswith('V3'):
+        if runtype[1].endswith('V2') or runtype[1].endswith('V3'):
             return int(runtype[1][:-2])
         else:
             return int(runtype[1])
