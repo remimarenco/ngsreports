@@ -57,8 +57,8 @@ def main():
                     others_value += sequencing_by_runtype[key][other_group]
 
             total_value = group_value + others_value
-            group_data.append(group_value*100/total_value)
-            others_data.append(100 - group_value*100/total_value)
+            group_data.append(group_value*100.0/total_value)
+            others_data.append(100 - group_value*100.0/total_value)
                 
         hiseq = ''
         for key in lab_member_hiseq_usage[group].keys():
