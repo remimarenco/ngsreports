@@ -21,29 +21,86 @@ def main():
     
     data = parse_billing_report(options.report, options.date)
     
+    institute_sequencing_by_runtype = defaultdict(lambda : defaultdict(int))
     sequencing_by_runtype = defaultdict(lambda : defaultdict(int))
+    all_institutes = set()
     all_groups = set()
+    group_hiseq_usage = defaultdict(lambda : defaultdict(int))
     lab_member_hiseq_usage = defaultdict(lambda : defaultdict(int))
+    group_miseq_usage = defaultdict(lambda : defaultdict(int))
     lab_member_miseq_usage = defaultdict(lambda : defaultdict(int))
+    billing_table_by_institute = defaultdict(str)
     billing_table_by_group = defaultdict(str)
     
+    # institute template
+    with open (os.path.join(os.path.dirname(__file__), 'js', 'institute-report-template.html'), "r") as f:
+        institute_template=f.read()
+
+    # group template
     with open (os.path.join(os.path.dirname(__file__), 'js', 'group-report-template.html'), "r") as f:
-        template=f.read()
+        group_template=f.read()
 
     for key, value in data.iteritems():
         contents = value.split('\t')
+        institute_sequencing_by_runtype[contents[4]][contents[2]] += 1
         sequencing_by_runtype[contents[4]][contents[1]] += 1
+        billing_table_by_institute[contents[2]] += '["%s", "%s", "%s", "%s", "%s", "%s" , "%s", "%s"],' % (contents[1], contents[0], contents[3], contents[4], contents[5], contents[6], contents[10], contents[9])
         billing_table_by_group[contents[1]] += '[ "%s", "%s", "%s", "%s", "%s" , "%s", "%s"],' % (contents[0], contents[3], contents[4], contents[5], contents[6], contents[10], contents[9])
+        all_institutes.add(contents[2])
         all_groups.add(contents[1])
         if contents[4].startswith('Hiseq'):
+            group_hiseq_usage[contents[2]][contents[1]] += int(contents[7])
             lab_member_hiseq_usage[contents[1]][contents[0]] += int(contents[7])
         elif contents[4].startswith('Miseq'):
+            group_miseq_usage[contents[2]][contents[1]] += int(contents[7])
             lab_member_miseq_usage[contents[1]][contents[0]] += int(contents[7])
 
     print "================================================================================"
     categories = sorted(sequencing_by_runtype.keys())
     print "categories: %s" % categories
     
+    # institute report
+    for institute in all_institutes:
+        institute_data = []
+        others_data = []
+        for key in categories:
+            institute_value = 0
+            if institute in institute_sequencing_by_runtype[key].keys():
+                institute_value = institute_sequencing_by_runtype[key][institute]
+            others_value = 0
+            for other_institute in institute_sequencing_by_runtype[key].keys():
+                if not other_institute == institute:
+                    others_value += institute_sequencing_by_runtype[key][other_institute]
+
+            total_value = institute_value + others_value
+            institute_data.append(institute_value*100.0/total_value)
+            others_data.append(100 - institute_value*100.0/total_value)
+                
+        hiseq = ''
+        for key in group_hiseq_usage[institute].keys():
+            hiseq += "['%s', %s]," % (key, group_hiseq_usage[institute][key])
+
+        miseq = ''
+        for key in group_miseq_usage[institute].keys():
+            miseq += "['%s', %s]," % (key, group_miseq_usage[institute][key])
+            
+        billing_table = billing_table_by_institute[institute]
+        """ { "sTitle": "Group" },   
+            { "sTitle": "Researcher" },
+            { "sTitle": "SLX-ID" },
+            { "sTitle": "Run type" },
+            { "sTitle": "Flow-cell"},
+            { "sTitle": "Lane"},
+            { "sTitle": "Billing comments"}"""
+        print billing_table
+        
+        filename = options.date + '-' + institute.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
+        print filename
+        f = open(os.path.join(options.outputdir, 'institutes', filename),'w')
+        f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
+        f.close()
+
+    # group report
     for group in all_groups:
         group_data = []
         others_data = []
@@ -69,7 +126,7 @@ def main():
             miseq += "['%s', %s]," % (key, lab_member_miseq_usage[group][key])
             
         billing_table = billing_table_by_group[group]
-        """    { "sTitle": "Researcher" },
+        """ { "sTitle": "Researcher" },
             { "sTitle": "SLX-ID" },
             { "sTitle": "Run type" },
             { "sTitle": "Flow-cell"},
@@ -79,7 +136,7 @@ def main():
         filename = options.date + '-' + group.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
         print filename
         f = open(os.path.join(options.outputdir, 'groups', filename),'w')
-        f.write(string.Template(template).safe_substitute({'categories': categories, 'group': group, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
+        f.write(string.Template(group_template).safe_substitute({'categories': categories, 'group': group, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
         f.close()
 
 def parse_billing_report(file_report, month):
