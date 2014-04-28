@@ -92,17 +92,24 @@ def parse_billing_report(file_report, with_extra=False):
     
     # 0researcher\t1lab\t2institute\t3slxid\t4runtype\t5billable\t6billingmonth\t7flowcellid\t8lane\t9flowcellbillingcomments\t10billingcomments\t11runfolder\t12instrument\t13submissiondate\t14completiondate\t
     data = defaultdict(list)
+    ddata = defaultdict(dict)
+    is_header = True
     with open (file_report, "U") as f:
         for line in f.readlines():
-            content = line.strip().replace('"','').split('\t')
-            if not content[7] in 'flowcellid':
-                key = "%s_%s" % (content[7], content[8])
-                data[key].append(';'.join(content[3:7] + content[7:9]))
+            values = line.strip().replace('"','').split('\t')
+            if is_header:
+                header_keys = values
+                is_header = False
+            if not values[7] in 'flowcellid':
+                key = "%s_%s" % (values[7], values[8])
+                data[key].append(';'.join(values[3:7] + values[7:9]))
+                ddata[key] = dict(zip(header_keys, values))
                 if with_extra:
-                    if content[13] == '':
-                        print 'NODATE: %s:%s' % (key, ';'.join(content[3:7] + content[7:9]))
+                    if values[13] == '':
+                        print 'NODATE: %s:%s' % (key, ';'.join(values[3:7] + values[7:9]))
                     else:
-                        print '  date: %s:%s' % (key, ';'.join(content[3:7] + content[7:9]))
+                        print '  date: %s:%s' % (key, ';'.join(values[3:7] + values[7:9]))
+    print ddata
     return data
     
 def send_email(lane_number, files):    
@@ -120,6 +127,7 @@ def send_email(lane_number, files):
     All billing reports can be found here: http://uk-cri-lsol03.crnet.org:8080/solexa/home/mib-cri/solexa/ngsreports/billing/
     
     Group reports: http://uk-cri-lsol03.crnet.org:8080/solexa//home/mib-cri/solexa/ngsreports/groups/
+    Institute reports: http://uk-cri-lsol03.crnet.org:8080/solexa//home/mib-cri/solexa/ngsreports/institutes/
     --
     Anne Pajon, CRI Bioinformatics Core
     anne.pajon@cruk.cam.ac.uk | +44 (0)1223 769 631

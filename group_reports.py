@@ -97,7 +97,7 @@ def main():
         filename = options.date + '-' + institute.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
         print filename
         f = open(os.path.join(options.outputdir, 'institutes', filename),'w')
-        f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
+        f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'date': options.date, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
         f.close()
 
     # group report
@@ -136,7 +136,7 @@ def main():
         filename = options.date + '-' + group.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
         print filename
         f = open(os.path.join(options.outputdir, 'groups', filename),'w')
-        f.write(string.Template(group_template).safe_substitute({'categories': categories, 'group': group, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
+        f.write(string.Template(group_template).safe_substitute({'categories': categories, 'group': group, 'date': options.date, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
         f.close()
 
 def parse_billing_report(file_report, month):
