@@ -109,7 +109,6 @@ def parse_billing_report(file_report, with_extra=False):
                         print 'NODATE: %s:%s' % (key, ';'.join(values[3:7] + values[7:9]))
                     else:
                         print '  date: %s:%s' % (key, ';'.join(values[3:7] + values[7:9]))
-    print ddata
     return data
     
 def send_email(lane_number, files):    
