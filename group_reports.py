@@ -152,7 +152,12 @@ def parse_billing_report(file_report, month):
                     key = "%s_%s_%s" % (content[7], content[8], content[3])
                     runtype = content[4].split('_')
                     cycles = convert_runtype_into_cycles(runtype)
-                    data[key] = '\t'.join(content[0:4] + [content[4].replace('V3','').replace('V2','')] + content[7:9] + [str(cycles), content[10], content[5], '%.0f' % float(content[22])])
+                    if content[22]:
+                        nreads = '%.0f' % float(content[22])
+                    else:
+                        nreads = 'N/A'
+                        print 'no yield for %s' % key
+                    data[key] = '\t'.join(content[0:4] + [content[4].replace('V3','').replace('V2','')] + content[7:9] + [str(cycles), content[10], content[5], nreads])
     return data
         
 def convert_runtype_into_cycles(runtype):
