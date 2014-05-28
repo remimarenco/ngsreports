@@ -8,6 +8,7 @@ Created by Anne Pajon on 2013-10-04.
 
 import sys
 import os
+import csv
 from collections import defaultdict
 import argparse
 
@@ -61,17 +62,28 @@ def main():
     print >>output, "================================================================================"
     print >>output, "THIS REPORT %s" % options.this_month_report
     new_lanes = defaultdict(list)
-    print >>output, "--------------------------------------------------------------------------------"
-    print >>output, "-- ***WARNING*** more than one entry found in %s for these lanes" % (options.last_month_report)
-    print >>output, "--------------------------------------------------------------------------------"
+    print >>output, "********************************************************************************"
+    print >>output, "** WARNING *********************************************************************" 
+    print >>output, "** more than one entry found in %s for these lanes which are billable" % (options.last_month_report)
+    print >>output, "********************************************************************************"
+    i=0
     for key, value in this_month_data.iteritems():
-        content = value[0].split(';')
         if len(value) > 1:
-            print >>output, key, value
+            billable_flag=False
+            for v in value:
+                content = v.split(';')
+                if content[2] == 'Bill':
+                    billable_flag=True
+            if billable_flag:
+                i += 1
+                print >>output, "**", i, ":",  key, value
         if not key in last_month_data.keys():
+            content = value[0].split(';')
             new_lanes[content[3]].append(value) 
 
+    print >>output, "********************************************************************************"
     print >>output, "--------------------------------------------------------------------------------"
+    print >>output, "-- NEW lanes to be billed this month"
     print >>output, "-- NEW lanes in %s NOT FOUND in %s to bill this month" % (options.this_month_report, options.last_month_report)
     print >>output, "--------------------------------------------------------------------------------"
     i = 0
@@ -86,29 +98,14 @@ def main():
     if options.email:
         send_email(i, [options.this_month_report, options.output])
 
-def parse_billing_report(file_report, with_extra=False):
-    # file format
-    # 0:"researcher"\t1:"lab"\t2:"institute"\t3:"slxid"***\t4:"runtype"***\t5:"billable"***\t6:"billingmonth"\t7:"flowcellid"***\t8:"lane"***\t
-    
-    # 0researcher\t1lab\t2institute\t3slxid\t4runtype\t5billable\t6billingmonth\t7flowcellid\t8lane\t9flowcellbillingcomments\t10billingcomments\t11runfolder\t12instrument\t13submissiondate\t14completiondate\t
+def parse_billing_report(file_report):
     data = defaultdict(list)
-    ddata = defaultdict(dict)
-    is_header = True
     with open (file_report, "U") as f:
-        for line in f.readlines():
-            values = line.strip().replace('"','').split('\t')
-            if is_header:
-                header_keys = values
-                is_header = False
-            if not values[7] in 'flowcellid':
-                key = "%s_%s" % (values[7], values[8])
-                data[key].append(';'.join(values[3:7] + values[7:9]))
-                ddata[key] = dict(zip(header_keys, values))
-                if with_extra:
-                    if values[13] == '':
-                        print 'NODATE: %s:%s' % (key, ';'.join(values[3:7] + values[7:9]))
-                    else:
-                        print '  date: %s:%s' % (key, ';'.join(values[3:7] + values[7:9]))
+        reader = csv.DictReader(f, delimiter='\t')
+        for line in reader:
+            if line['billable'] == 'Bill':
+                key = "%s_%s" % (line['flowcellid'], line['lane'])
+                data[key].append(';'.join([line['slxid'], line['runtype'], line['billable'], line['billingmonth'], line['flowcellid'], line['lane']]))
     return data
     
 def send_email(lane_number, files):    

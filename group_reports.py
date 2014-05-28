@@ -7,6 +7,7 @@ Created by Anne Pajon on 2014-01-31.
 """
 import sys
 import os
+import csv
 from collections import defaultdict
 import argparse
 import string
@@ -17,6 +18,7 @@ def main():
     parser.add_argument("--report", dest="report", action="store", help="path to billing report '/path/to/billing/report/201402-billing.csv'", required=True)
     parser.add_argument("--date", dest="date", action="store", help="date to produce group reports e.g. '2014-01'", required=True)
     parser.add_argument("--outputdir", dest="outputdir", action="store", help="path to the output folder '/path/to/billing/'", required=True)
+    parser.add_argument("--cumulative", dest="cumulative", action="store_true", default=False, help="Produce a cumulative report till the date entered")
     options = parser.parse_args()
     
     data = parse_billing_report(options.report, options.date)
@@ -41,19 +43,20 @@ def main():
         group_template=f.read()
 
     for key, value in data.iteritems():
-        contents = value.split('\t')
-        institute_sequencing_by_runtype[contents[4]][contents[2]] += 1
-        sequencing_by_runtype[contents[4]][contents[1]] += 1
-        billing_table_by_institute[contents[2]] += '["%s", "%s", "%s", "%s", "%s", "%s" , "%s", "%s"],' % (contents[1], contents[0], contents[3], contents[4], contents[5], contents[6], contents[10], contents[9])
-        billing_table_by_group[contents[1]] += '[ "%s", "%s", "%s", "%s", "%s" , "%s", "%s"],' % (contents[0], contents[3], contents[4], contents[5], contents[6], contents[10], contents[9])
-        all_institutes.add(contents[2])
-        all_groups.add(contents[1])
-        if contents[4].startswith('Hiseq'):
-            group_hiseq_usage[contents[2]][contents[1]] += int(contents[7])
-            lab_member_hiseq_usage[contents[1]][contents[0]] += int(contents[7])
-        elif contents[4].startswith('Miseq'):
-            group_miseq_usage[contents[2]][contents[1]] += int(contents[7])
-            lab_member_miseq_usage[contents[1]][contents[0]] += int(contents[7])
+        institute_sequencing_by_runtype[value['runtype']][value['institute']] += 1
+        sequencing_by_runtype[value['runtype']][value['lab']] += 1
+        
+        billing_table_by_institute[value['institute']] += '["%s", "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s"],' % (value['lab'], value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'])
+        billing_table_by_group[value['lab']] += '[ "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s"],' % (value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'])
+        
+        all_institutes.add(value['institute'])
+        all_groups.add(value['lab'])
+        if value['runtype'].startswith('Hiseq'):
+            group_hiseq_usage[value['institute']][value['lab']] += int(value['cycles'])
+            lab_member_hiseq_usage[value['lab']][value['researcher']] += int(value['cycles'])
+        elif value['runtype'].startswith('Miseq'):
+            group_miseq_usage[value['institute']][value['lab']] += int(value['cycles'])
+            lab_member_miseq_usage[value['lab']][value['researcher']] += int(value['cycles'])
 
     print "================================================================================"
     categories = sorted(sequencing_by_runtype.keys())
@@ -73,8 +76,8 @@ def main():
                     others_value += institute_sequencing_by_runtype[key][other_institute]
 
             total_value = institute_value + others_value
-            institute_data.append(institute_value*100.0/total_value)
-            others_data.append(100 - institute_value*100.0/total_value)
+            institute_data.append(institute_value*100.0/float(total_value))
+            others_data.append(100 - institute_value*100.0/float(total_value))
                 
         hiseq = ''
         for key in group_hiseq_usage[institute].keys():
@@ -85,15 +88,18 @@ def main():
             miseq += "['%s', %s]," % (key, group_miseq_usage[institute][key])
             
         billing_table = billing_table_by_institute[institute]
-        """ { "sTitle": "Group" },   
-            { "sTitle": "Researcher" },
-            { "sTitle": "SLX-ID" },
-            { "sTitle": "Run type" },
-            { "sTitle": "Flow-cell"},
-            { "sTitle": "Lane"},
-            { "sTitle": "Billing comments"}"""
-        print billing_table
-        
+        """ 
+        { "sTitle": "Group" },
+        { "sTitle": "Researcher" },
+        { "sTitle": "SLX-ID" },
+        { "sTitle": "Run type" },
+        { "sTitle": "Flow-cell"},
+        { "sTitle": "Lane"},
+        { "sTitle": "Yield (M reads)"},
+        { "sTitle": "Billable"},
+        { "sTitle": "Billing month"}
+        """
+
         filename = options.date + '-' + institute.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
         print filename
         f = open(os.path.join(options.outputdir, 'institutes', filename),'w')
@@ -126,12 +132,16 @@ def main():
             miseq += "['%s', %s]," % (key, lab_member_miseq_usage[group][key])
             
         billing_table = billing_table_by_group[group]
-        """ { "sTitle": "Researcher" },
-            { "sTitle": "SLX-ID" },
-            { "sTitle": "Run type" },
-            { "sTitle": "Flow-cell"},
-            { "sTitle": "Lane"},
-            { "sTitle": "Billing comments"}"""
+        """ 
+        { "sTitle": "Researcher" },
+        { "sTitle": "SLX-ID" },
+        { "sTitle": "Run type" },
+        { "sTitle": "Flow-cell"},
+        { "sTitle": "Lane"},
+        { "sTitle": "Yield (M reads)"},
+        { "sTitle": "Billable"},
+        { "sTitle": "Billing month"}
+        """
         
         filename = options.date + '-' + group.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
         print filename
@@ -140,28 +150,26 @@ def main():
         f.close()
 
 def parse_billing_report(file_report, month):
-    # file format
-    # "researcher***"\t"lab***"\t"institute***"\t"slxid"***\t"runtype"***\t"billable"\t"billingmonth"\t"flowcellid"***\t"lane"***\tflowcellbillingcomments\tbillingcomments***
-    # "researcher***"\t"lab***"\t"institute***"\t"slxid"***\t"runtype"***\tbillingmonth"\t"flowcellid"***\t"lane"***\tflowcellbillingcomments\tbillingcomments***\tbillable***"\t
-    data = defaultdict(list)
+    data = defaultdict(dict)
     with open (file_report, "U") as f:
-        for line in f.readlines():
-            content = line.strip().replace('"','').split('\t')
-            if not content[7] in 'flowcellid':
-                if content[6] == month:
-                    key = "%s_%s_%s" % (content[7], content[8], content[3])
-                    runtype = content[4].split('_')
-                    cycles = convert_runtype_into_cycles(runtype)
-                    if content[22]:
-                        nreads = '%.0f' % float(content[22])
-                    else:
-                        nreads = 'N/A'
-                        print 'no yield for %s' % key
-                    data[key] = '\t'.join(content[0:4] + [content[4].replace('V3','').replace('V2','')] + content[7:9] + [str(cycles), content[10], content[5], nreads])
+        reader = csv.DictReader(f, delimiter='\t')
+        for line in reader:
+            if line['billingmonth'] == month:
+                key = "_".join([line['flowcellid'], line['lane'], line['slxid']])
+                line['cycles'] = convert_runtype_into_cycles(line['runtype'].split('_'))
+                if line['yield']:
+                    line['yield'] = '%.0f' % float(line['yield'])
+                else:
+                    line['yield'] = 'N/A'
+                    print 'no yield for %s' % key
+                line['runtype'] = line['runtype'].replace('V3','').replace('V2','')
+                data[key] = line
     return data
         
 def convert_runtype_into_cycles(runtype):
-    if runtype[0] == 'Hiseq':
+    if not runtype[0]:
+        return 0
+    elif runtype[0] == 'Hiseq':
         if runtype[1].startswith('SE'):
             return int(runtype[1][2:])
         elif runtype[1].startswith('PE'):
