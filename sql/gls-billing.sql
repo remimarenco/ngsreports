@@ -1,8 +1,10 @@
 -- --------------------------------------------------------------------------------
--- BILLING QUERY - latest version 6-Mar-2014
--- against genologics database v2.5.2.367 http://genologics.com/
+-- BILLING QUERY - latest version 29-May-2014
+-- against genologics database v3.0.2.8 http://genologics.com/
 -- --------------------------------------------------------------------------------
 -- changelog:
+-- 29/05/15: remove control samples
+-- 28/05/14: simplify billing query containing only essential fields
 -- 05/03/14: remove sub-query and process join, simplify query by using WITH 
 --           change billing month to return billing process daterun instead of 
 --           sequencing process daterun
@@ -32,7 +34,7 @@ itype.name || '_' || case when itype.name = 'Miseq' then split_part(pudf4.udfval
 audf1.udfvalue as billable, 
 to_char(billing.daterun, 'YYYY-MM') as billingmonth, 
 sudf2.udfvalue as billingcode,
-pudf3.udfvalue as flowcellid, 
+case when pudf3.udfvalue is null then container.name else pudf3.udfvalue end as flowcellid, 
 'Lane' || containerplacement.wellyposition + 1 as lane, 
 audf2.udfvalue as yield
 -- FROM ---------------------------------------------------------------------------
@@ -76,5 +78,7 @@ AND sample.projectid=project.projectid
 AND project.researcherid=researcher.researcherid
 AND researcher.labid=lab.labid
 AND artifact.luid=billing.artifactluid
+AND sample.name NOT LIKE 'Genomics Control%'
+AND project.name != 'Controls'
 -- ORDER BY -----------------------------------------------------------------------
 ORDER BY billable, flowcellid, lane
