@@ -1,8 +1,10 @@
 -- --------------------------------------------------------------------------------
--- BILLING QUERY - latest version 6-Mar-2014
--- against genologics database v2.5.2.367 http://genologics.com/
+-- QC QUERY - latest version 29-May-2014
+-- against genologics database v3.0.2.8 http://genologics.com/
 -- --------------------------------------------------------------------------------
 -- changelog:
+-- 30/04/14: add acceptance and publishing dates and number of days between the two
+-- 29/05/14: create qc query from previous billing one
 -- 05/03/14: remove sub-query and process join, simplify query by using WITH 
 --           change billing month to return billing process daterun instead of 
 --           sequencing process daterun
@@ -23,7 +25,25 @@ WITH billing as (
 	AND processtype.displayname='Billing' 
 	AND processiotracker.inputartifactid=artifact.artifactid 
 	AND process.daterun >= '2013-04-01' AND process.daterun <= 'BILLING-DATE'
-)
+) ,
+publishing as (
+	SELECT artifact.luid as artifactluid, process.daterun as daterun
+	FROM processiotracker, process, processtype, artifact
+	WHERE processiotracker.processid=process.processid 
+	AND process.typeid=processtype.typeid 
+	AND processtype.displayname='Publishing' 
+	AND processiotracker.inputartifactid=artifact.artifactid 
+),
+accept as (
+ 	SELECT sample.processid as sampleid, process.daterun as daterun
+ 	FROM processiotracker, process, processtype, artifact, artifact_sample_map, sample
+ 	WHERE processiotracker.processid=process.processid 
+ 	AND process.typeid=processtype.typeid 
+ 	AND (processtype.displayname='Accept SLX' or processtype.displayname='Aggregate QC (Library Validation)')
+ 	AND processiotracker.inputartifactid=artifact.artifactid 
+ 	AND artifact_sample_map.artifactid=artifact.artifactid
+ 	AND artifact_sample_map.processid=sample.processid
+) 
 -- SELECT -------------------------------------------------------------------------
 SELECT distinct
 researcher.firstname || ' ' || researcher.lastname as researcher, 
@@ -33,18 +53,23 @@ sudf1.udfvalue as slxid,
 itype.name || '_' || case when itype.name = 'Miseq' then split_part(pudf6.udfvalue, '-', 2) else case when pudf2.udfvalue is null then 'SE' else 'PE' end || pudf1.udfvalue end as runtype,
 audf1.udfvalue as billable, 
 to_char(billing.daterun, 'YYYY-MM') as billingmonth, 
-pudf4.udfvalue as flowcellid, 
+case when pudf4.udfvalue is null then container.name else pudf4.udfvalue end as flowcellid, 
 'Lane' || containerplacement.wellyposition + 1 as lane, 
 billing.fcbillingcomments as flowcellbillingcomments,
 audf2.udfvalue as billingcomments,
 pudf5.udfvalue as runfolder, 
 instrument.name as instrument,
 to_char(sample.datereceived, 'YYYY-MM-DD') as submissiondate,
-to_char(to_date(pudf3.udfvalue, 'YYYY-MM-DD'), 'YYYY-MM-DD') as completiondate, 
+to_char(accept.daterun, 'YYYY-MM-DD') as acceptancedate,
+to_char(to_date(pudf3.udfvalue, 'YYYY-MM-DD'), 'YYYY-MM-DD') as sequencingdate, 
+to_char(publishing.daterun, 'YYYY-MM-DD') as publishingdate,
+to_char(billing.daterun, 'YYYY-MM-DD') as billingdate, 
+publishing.daterun - accept.daterun as accept2publishdays,
 sudf5.udfvalue as billing_code,
 sudf2.udfvalue as library_type,
 sudf3.udfvalue as index_type,
 to_char(avg(to_number(sudf4.udfvalue, '99999')), '9999.99') as avg_library_length,
+sudf6.udfvalue as priority_status,
 audf3.udfvalue as yield_pf_r1,
 audf4.udfvalue as avg_q_score_r1,
 audf5.udfvalue as percent_bases_q30_r1,
@@ -61,6 +86,8 @@ audf13.udfvalue as percent_error_rate_r1,
 ludf1.udfvalue as external
 -- FROM ---------------------------------------------------------------------------
 FROM billing, 
+publishing,
+accept,
 process 
 LEFT OUTER JOIN process_udf_view as pudf1 on (pudf1.processid=process.processid AND pudf1.udfname like 'Read 1 Cycle%') 
 LEFT OUTER JOIN process_udf_view as pudf2 on (pudf2.processid=process.processid AND pudf2.udfname like 'Read 2 Cycle%') 
@@ -97,7 +124,8 @@ LEFT OUTER JOIN sample_udf_view as sudf1 on (sudf1.sampleid=sample.sampleid AND 
 LEFT OUTER JOIN sample_udf_view as sudf2 on (sudf2.sampleid=sample.sampleid AND sudf2.udfname = 'Library Type')
 LEFT OUTER JOIN sample_udf_view as sudf3 on (sudf3.sampleid=sample.sampleid AND sudf3.udfname = 'Index Type')
 LEFT OUTER JOIN sample_udf_view as sudf4 on (sudf4.sampleid=sample.sampleid AND sudf4.udfname = 'Average Library Length')
-LEFT OUTER JOIN sample_udf_view as sudf5 on (sudf5.sampleid=sample.sampleid AND sudf5.udfname = 'Billing Information'),
+LEFT OUTER JOIN sample_udf_view as sudf5 on (sudf5.sampleid=sample.sampleid AND sudf5.udfname = 'Billing Information')
+LEFT OUTER JOIN sample_udf_view as sudf6 on (sudf6.sampleid=sample.sampleid AND sudf6.udfname = 'Priority Status'),
 project, 
 researcher, 
 lab 
@@ -119,8 +147,15 @@ AND sample.projectid=project.projectid
 AND project.researcherid=researcher.researcherid
 AND researcher.labid=lab.labid
 AND artifact.luid=billing.artifactluid
+AND artifact.luid=publishing.artifactluid
+AND sample.processid=accept.sampleid
+AND sample.name NOT LIKE 'Genomics Control%'
+AND project.name != 'Controls'
 -- GROUP BY -----------------------------------------------------------------------
 GROUP BY researcher, lab, institute, slxid, runtype, billable, billingmonth, flowcellid, lane, flowcellbillingcomments, billingcomments, runfolder, 
-instrument, submissiondate, completiondate, billing_code, library_type, index_type, yield_pf_r1, avg_q_score_r1, percent_bases_q30_r1, yield, 
-percent_lost_reads, cluster_density_r1, percent_pf_r1, intensity_cycle_1_r1, percent_intensity_cycle_20_r1, percent_phasing_r1, percent_prephasing_r1, 
-percent_aligned_r1, percent_error_rate_r1, external
+instrument, submissiondate, acceptancedate, sequencingdate, publishingdate, billingdate, accept2publishdays, billing_code, library_type, index_type, 
+priority_status, yield_pf_r1, avg_q_score_r1, percent_bases_q30_r1, yield, percent_lost_reads, cluster_density_r1, percent_pf_r1, intensity_cycle_1_r1, 
+percent_intensity_cycle_20_r1, percent_phasing_r1, percent_prephasing_r1, percent_aligned_r1, percent_error_rate_r1, external
+-- ORDER BY -----------------------------------------------------------------------
+ORDER BY billable, flowcellid, lane
+
