@@ -35,8 +35,7 @@ audf1.udfvalue as billable,
 to_char(billing.daterun, 'YYYY-MM') as billingmonth, 
 sudf2.udfvalue as billingcode,
 case when pudf3.udfvalue is null then container.name else pudf3.udfvalue end as flowcellid, 
-'Lane' || containerplacement.wellyposition + 1 as lane, 
-audf2.udfvalue as yield
+'Lane' || containerplacement.wellyposition + 1 as lane
 -- FROM ---------------------------------------------------------------------------
 FROM billing, 
 process 
@@ -50,8 +49,7 @@ instrument,
 itype, 
 processiotracker, 
 artifact 
-LEFT OUTER JOIN artifact_udf_view as audf1 on (audf1.artifactid=artifact.artifactid AND audf1.udfname = 'Billable')
-LEFT OUTER JOIN artifact_udf_view as audf2 on (audf2.artifactid=artifact.artifactid AND audf2.udfname = 'Yield (Mreads)'), 
+LEFT OUTER JOIN artifact_udf_view as audf1 on (audf1.artifactid=artifact.artifactid AND audf1.udfname = 'Billable'),
 containerplacement, 
 container, 
 artifact_sample_map, 
