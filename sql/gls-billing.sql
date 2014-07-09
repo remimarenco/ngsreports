@@ -30,12 +30,12 @@ researcher.firstname || ' ' || researcher.lastname as researcher,
 lab.name as lab, 
 address.institution as institute,
 sudf1.udfvalue as slxid, 
-case when sudf3.udfvalue = 'HiSeq 2000' then 'HiSeq2000' when sudf3.udfvalue = 'HiSeq 2-lane' then 'HiSeqRapid' else itype.name end || '_' || case when itype.name = 'Miseq' then split_part(pudf4.udfvalue, '-', 2) else case when pudf2.udfvalue is null then 'SE' else 'PE' end || pudf1.udfvalue end as runtype,
+itype.name || '_' || case when itype.name = 'Miseq' then split_part(pudf4.udfvalue, '-', 2) else case when pudf2.udfvalue is null then 'SE' else 'PE' end || pudf1.udfvalue end as runtype,
 audf1.udfvalue as billable, 
 to_char(billing.daterun, 'YYYY-MM') as billingmonth, 
 sudf2.udfvalue as billingcode,
 case when pudf3.udfvalue is null then container.name else pudf3.udfvalue end as flowcellid, 
-'Lane' || containerplacement.wellyposition + 1 as lane,
+'Lane' || containerplacement.wellyposition + 1 as lane, 
 audf2.udfvalue as yield
 -- FROM ---------------------------------------------------------------------------
 FROM billing, 
@@ -57,8 +57,7 @@ container,
 artifact_sample_map, 
 sample 
 LEFT OUTER JOIN sample_udf_view as sudf1 on (sudf1.sampleid=sample.sampleid AND sudf1.udfname = 'SLX Identifier')
-LEFT OUTER JOIN sample_udf_view as sudf2 on (sudf2.sampleid=sample.sampleid AND sudf2.udfname = 'Billing Information')
-LEFT OUTER JOIN sample_udf_view as sudf3 on (sudf3.sampleid=sample.sampleid AND sudf3.udfname = 'Workflow'),
+LEFT OUTER JOIN sample_udf_view as sudf2 on (sudf2.sampleid=sample.sampleid AND sudf2.udfname = 'Billing Information'),
 project, 
 researcher, 
 lab 
