@@ -24,7 +24,6 @@ WITH billing as (
 	AND process.typeid=processtype.typeid 
 	AND processtype.displayname='Billing' 
 	AND processiotracker.inputartifactid=artifact.artifactid 
-	AND process.daterun >= '2013-04-01' AND process.daterun <= 'BILLING-DATE'
 ) ,
 publishing as (
 	SELECT artifact.luid as artifactluid, process.daterun as daterun

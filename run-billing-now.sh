@@ -4,9 +4,9 @@ BASEDIR=$(dirname $0)
 SQLDIR=$BASEDIR/sql/
 OUTPUTDIR=$BASEDIR/billing/
 
-BILLING_DATE=$(date +%Y%m)
-BILLING_PREVDATE=$(date --date="$(date +%Y-%m-15) -1 month" +%Y%m)
-GROUPREPORT_DATE=$(date --date="$(date +%Y-%m-15) -1 month" +%Y-%m)
+BILLING_DATE=201407
+BILLING_PREVDATE=201406
+GROUPREPORT_DATE=2014-06
 
 BILLING_QUERY=$SQLDIR/gls-billing.sql
 BILLING_CSVOUT=$OUTPUTDIR/$BILLING_DATE-billing.csv
@@ -31,7 +31,7 @@ psql -h lims -U readonly -d "clarityDB"  -c "COPY ( `cat $BILLING_QUERY` ) TO ST
 python $BASEDIR/group_reports.py --report=$BILLING_CSVOUT --date=$GROUPREPORT_DATE --outputdir=$BASEDIR
 
 # billing report comparison & email notification
-python $BASEDIR/autobilling.py --last-month-report=$BILLING_LASTCVSOUT --this-month-report=$BILLING_CSVOUT --output=$COMPAREOUT --email
+python $BASEDIR/autobilling.py --last-month-report=$BILLING_LASTCVSOUT --this-month-report=$BILLING_CSVOUT --output=$COMPAREOUT #--email
 
 # qc ---------------------------------------------------------------------------
 
@@ -40,4 +40,9 @@ cp $QC_QUERY $OUTPUTDIR/.
 
 # qc report
 psql -h lims -U readonly -d "clarityDB"  -c "COPY ( `cat $QC_QUERY` ) TO STDOUT WITH DELIMITER AS E'\t' CSV HEADER " > $QC_CSVOUT || echo 'ERROR: Unable to run $QC_QUERY' > $QC_CSVOUT
+
+
+
+
+
 
