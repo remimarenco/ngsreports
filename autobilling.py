@@ -122,6 +122,7 @@ def send_email(lane_number, files):
     Please find attached the billing report and its comparison with the one from last month.
     All billing reports can be found here: http://uk-cri-lsol03.crnet.org:8080/solexa/home/mib-cri/solexa/ngsreports/billing/
     
+    Summary reports: http://uk-cri-lsol03.crnet.org:8080/solexa/home/mib-cri/solexa/ngsreports/summaries/
     Group reports: http://uk-cri-lsol03.crnet.org:8080/solexa//home/mib-cri/solexa/ngsreports/groups/
     Institute reports: http://uk-cri-lsol03.crnet.org:8080/solexa//home/mib-cri/solexa/ngsreports/institutes/
     --
