@@ -30,7 +30,7 @@ psql -h lims -U readonly -d "clarityDB"  -c "COPY ( `cat $BILLING_QUERY` ) TO ST
 # test - quick/simple query: psql -h lims -U readonly -d "clarityDB"  -c "COPY ( select * from researcher ) TO STDOUT WITH DELIMITER AS E'\t' CSV HEADER " > $CSVOUT
 
 # group reports
-python $BASEDIR/group_reports.py --report=$BILLING_CSVOUT --date=$GROUPREPORT_DATE --outputdir=$BASEDIR
+python $BASEDIR/reports.py --report=$BILLING_CSVOUT --date=$GROUPREPORT_DATE --outputdir=$BASEDIR
 
 # billing report comparison & email notification
 python $BASEDIR/autobilling.py --last-month-report=$BILLING_LASTCVSOUT --this-month-report=$BILLING_CSVOUT --output=$COMPAREOUT --email

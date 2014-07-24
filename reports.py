@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-group_reports.py
+reports.py
 
 Created by Anne Pajon on 2014-01-31.
 """
@@ -18,7 +18,7 @@ def main():
     parser.add_argument("--report", dest="report", action="store", help="path to billing report '/path/to/billing/report/201402-billing.csv'", required=True)
     parser.add_argument("--date", dest="date", action="store", help="date to produce group reports e.g. '2014-01'", required=True)
     parser.add_argument("--outputdir", dest="outputdir", action="store", help="path to the output folder '/path/to/billing/'", required=True)
-    parser.add_argument("--cumulative", dest="cumulative", action="store_true", default=False, help="Produce a cumulative report till the date entered")
+    #parser.add_argument("--cumulative", dest="cumulative", action="store_true", default=False, help="Produce a cumulative report till the date entered")
     options = parser.parse_args()
     
     data = parse_billing_report(options.report, options.date)
@@ -59,8 +59,35 @@ def main():
             lab_member_miseq_usage[value['lab']][value['researcher']] += int(value['cycles'])
 
     print "================================================================================"
+    print "Summary Billing Report for %s" % options.date
+    print "================================================================================"
     categories = sorted(sequencing_by_runtype.keys())
-    print "categories: %s" % categories
+    total = defaultdict(int)
+    summary_header = 'group\t'
+    summary_text = ''
+    for cat in categories:
+        summary_header += '%s\t' % cat
+    summary_text = summary_header + '\n'
+    for group in all_groups:
+        summary_line = group + '\t'
+        for cat in categories:
+            summary_line += '%s\t' % sequencing_by_runtype[cat].get(group, 0)
+            total[cat] += sequencing_by_runtype[cat].get(group, 0)
+        summary_text += summary_line + '\n'
+    summary_line = 'total\t'
+    for cat in categories:
+        summary_line += '%s\t' % total[cat]
+    summary_text += summary_line + '\n'
+    print summary_text
+    print "================================================================================"
+    filename = options.date + '-billing-summary.csv'
+    filedir = os.path.join(options.outputdir, 'summaries')
+    if not os.path.exists(filedir):
+        os.makedirs(filedir)
+    with open(os.path.join(filedir, filename),'w') as f: 
+        f.write(summary_text)
+        
+            
     
     # institute report
     for institute in all_institutes:
@@ -101,10 +128,11 @@ def main():
         """
 
         filename = options.date + '-' + institute.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
-        print filename
-        f = open(os.path.join(options.outputdir, 'institutes', filename),'w')
-        f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'date': options.date, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
-        f.close()
+        filedir = os.path.join(options.outputdir, 'institutes')
+        if not os.path.exists(filedir):
+            os.makedirs(filedir)
+        with open(os.path.join(filedir, filename),'w') as f:
+            f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'date': options.date, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
 
     # group report
     for group in all_groups:
@@ -144,10 +172,11 @@ def main():
         """
         
         filename = options.date + '-' + group.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
-        print filename
-        f = open(os.path.join(options.outputdir, 'groups', filename),'w')
-        f.write(string.Template(group_template).safe_substitute({'categories': categories, 'group': group, 'date': options.date, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
-        f.close()
+        filedir = os.path.join(options.outputdir, 'groups')
+        if not os.path.exists(filedir):
+            os.makedirs(filedir)
+        with open(os.path.join(filedir, filename),'w') as f:
+            f.write(string.Template(group_template).safe_substitute({'categories': categories, 'group': group, 'date': options.date, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
 
 def parse_billing_report(file_report, month):
     data = defaultdict(dict)
