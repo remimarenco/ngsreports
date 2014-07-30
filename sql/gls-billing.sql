@@ -30,7 +30,15 @@ researcher.firstname || ' ' || researcher.lastname as researcher,
 lab.name as lab, 
 address.institution as institute,
 sudf1.udfvalue as slxid, 
-case when pudf3.udfvalue like '______CXX' then 'HiSeq2000' when pudf3.udfvalue like '______DXX' then 'HiSeqRapid' else itype.name end || '_' || case when itype.name = 'Miseq' then split_part(pudf4.udfvalue, '-', 2) else case when pudf2.udfvalue is null then 'SE' else 'PE' end || pudf1.udfvalue end as runtype,
+case when itype.name = 'Hiseq' then 
+        case when pudf3.udfvalue like '______NXX' then 'HiSeq'
+             when pudf3.udfvalue like '______CXX' then 'HiSeq2000' 
+             when pudf3.udfvalue like '______DXX' then 'HiSeqRapid' 
+             else 'HiSeqUnknown'
+        end
+     when itype.name = 'Miseq' then 'MiSeq'
+     else itype.name 
+end || '_' || case when pudf2.udfvalue is null then 'SE' else 'PE' end || pudf1.udfvalue as runtype,
 audf1.udfvalue as billable, 
 to_char(billing.daterun, 'YYYY-MM') as billingmonth, 
 sudf2.udfvalue as billingcode,

@@ -16,6 +16,8 @@ def main():
     # get the options
     parser = argparse.ArgumentParser()
     parser.add_argument("--report", dest="report", action="store", help="path to billing report '/path/to/billing/report/201402-billing.csv'", required=True)
+    parser.add_argument("--accounts", dest="accounts", action="store", help="path to the list of the group accounts '/path/to/billing/report/201402-account.csv'", required=True)
+    parser.add_argument("--prices", dest="prices", action="store", help="path to the pricing summary table '/path/to/PricingSummaryTable.txt'", required=True)
     parser.add_argument("--date", dest="date", action="store", help="date to produce group reports e.g. '2014-01'", required=True)
     parser.add_argument("--outputdir", dest="outputdir", action="store", help="path to the output folder '/path/to/billing/'", required=True)
     #parser.add_argument("--cumulative", dest="cumulative", action="store_true", default=False, help="Produce a cumulative report till the date entered")
@@ -36,11 +38,25 @@ def main():
     
     # institute template
     with open (os.path.join(os.path.dirname(__file__), 'js', 'institute-report-template.html'), "r") as f:
-        institute_template=f.read()
+        institute_template = f.read()
 
     # group template
     with open (os.path.join(os.path.dirname(__file__), 'js', 'group-report-template.html'), "r") as f:
-        group_template=f.read()
+        group_template = f.read()
+        
+    # group accounts
+    group_accounts = defaultdict(dict)
+    with open (options.accounts, "U") as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for line in reader:
+            group_accounts[line['group']] = line['pricing']
+                    
+    # prices
+    runtype_prices = defaultdict(dict)
+    with open (options.prices, "U") as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for line in reader:
+            runtype_prices[line['Run Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.2)': line['Ad hoc (x1.2)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
 
     for key, value in data.iteritems():
         institute_sequencing_by_runtype[value['runtype']][value['institute']] += 1
@@ -51,10 +67,10 @@ def main():
         
         all_institutes.add(value['institute'])
         all_groups.add(value['lab'])
-        if value['runtype'].startswith('Hiseq'):
+        if value['runtype'].lower().startswith('hiseq'):
             group_hiseq_usage[value['institute']][value['lab']] += int(value['cycles'])
             lab_member_hiseq_usage[value['lab']][value['researcher']] += int(value['cycles'])
-        elif value['runtype'].startswith('Miseq'):
+        elif value['runtype'].lower().startswith('miseq'):
             group_miseq_usage[value['institute']][value['lab']] += int(value['cycles'])
             lab_member_miseq_usage[value['lab']][value['researcher']] += int(value['cycles'])
 
@@ -68,15 +84,16 @@ def main():
     for cat in categories:
         summary_header += '%s\t' % cat
     summary_text = summary_header + '\n'
-    for group in all_groups:
+    for group in group_accounts.keys():
         summary_line = group + '\t'
         for cat in categories:
-            summary_line += '%s\t' % sequencing_by_runtype[cat].get(group, 0)
-            total[cat] += sequencing_by_runtype[cat].get(group, 0)
+            cost = sequencing_by_runtype[cat].get(group, 0) * float(runtype_prices[cat][group_accounts[group]])
+            summary_line += '£%.2f\t' % cost
+            total[cat] += cost
         summary_text += summary_line + '\n'
     summary_line = 'total\t'
     for cat in categories:
-        summary_line += '%s\t' % total[cat]
+        summary_line += '£%.2f\t' % total[cat]
     summary_text += summary_line + '\n'
     print summary_text
     print "================================================================================"
@@ -84,10 +101,8 @@ def main():
     filedir = os.path.join(options.outputdir, 'summaries')
     if not os.path.exists(filedir):
         os.makedirs(filedir)
-    with open(os.path.join(filedir, filename),'w') as f: 
+    with open(os.path.join(filedir, filename), 'w') as f: 
         f.write(summary_text)
-        
-            
     
     # institute report
     for institute in all_institutes:
@@ -196,23 +211,19 @@ def parse_billing_report(file_report, month):
     return data
         
 def convert_runtype_into_cycles(runtype):
+    print runtype
     if not runtype[0]:
         return 0
-    elif runtype[0] == 'Hiseq':
+    elif runtype[0].lower().startswith('hiseq') or runtype[0].lower().startswith('miseq'):
         if runtype[1].startswith('SE'):
             return int(runtype[1][2:])
         elif runtype[1].startswith('PE'):
             return int(runtype[1][2:])*2
-    elif runtype[0] == 'GAIIx':
+    elif runtype[0].lower().startswith('qaiix'):
         if runtype[1].startswith('SE'):
             return int(runtype[1][2:])
         elif runtype[1].startswith('PE'):
             return int(runtype[1][2:])*2
-    elif runtype[0] == 'Miseq':
-        if runtype[1].endswith('V2') or runtype[1].endswith('V3'):
-            return int(runtype[1][:-2])
-        else:
-            return int(runtype[1])
     else:
         return int(runtype[1])
 

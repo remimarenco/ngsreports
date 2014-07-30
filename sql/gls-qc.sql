@@ -49,7 +49,16 @@ researcher.firstname || ' ' || researcher.lastname as researcher,
 lab.name as lab, 
 address.institution as institute,
 sudf1.udfvalue as slxid, 
-itype.name || '_' || case when itype.name = 'Miseq' then split_part(pudf6.udfvalue, '-', 2) else case when pudf2.udfvalue is null then 'SE' else 'PE' end || pudf1.udfvalue end as runtype,
+case when itype.name = 'Hiseq' then 
+        case when pudf4.udfvalue like '______NXX' then 'HiSeq'
+             when pudf4.udfvalue like '______CXX' then 'HiSeq2000' 
+             when pudf4.udfvalue like '______DXX' then 'HiSeqRapid' 
+             else 'HiSeqUnknown'
+        end
+     when itype.name = 'Miseq' then itype.name 
+     else itype.name 
+end || '_' || case when pudf2.udfvalue is null then 'SE' else 'PE' end || pudf1.udfvalue as runtype,
+
 audf1.udfvalue as billable, 
 to_char(billing.daterun, 'YYYY-MM') as billingmonth, 
 case when pudf4.udfvalue is null then container.name else pudf4.udfvalue end as flowcellid, 
