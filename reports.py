@@ -79,22 +79,34 @@ def main():
     print "================================================================================"
     categories = sorted(sequencing_by_runtype.keys())
     total = defaultdict(int)
+    total_count = defaultdict(int)
     summary_header = 'group\t'
     summary_text = ''
+    summary_text_count = ''
     for cat in categories:
         summary_header += '%s\t' % cat
     summary_text = summary_header + '\n'
+    summary_text_count = summary_header + '\n'
     for group in group_accounts.keys():
         summary_line = group + '\t'
+        summary_line_count = group + '\t'
         for cat in categories:
             cost = sequencing_by_runtype[cat].get(group, 0) * float(runtype_prices[cat][group_accounts[group]])
             summary_line += '£%.2f\t' % cost
             total[cat] += cost
+            summary_line_count += '%s\t' % sequencing_by_runtype[cat].get(group, 0)
+            total_count[cat] += sequencing_by_runtype[cat].get(group, 0)
         summary_text += summary_line + '\n'
+        summary_text_count += summary_line_count + '\n'
     summary_line = 'total\t'
+    summary_line_count = 'total\t'
     for cat in categories:
         summary_line += '£%.2f\t' % total[cat]
+        summary_line_count += '%s\t' % total_count[cat]
     summary_text += summary_line + '\n'
+    summary_text_count += summary_line_count + '\n'
+    print summary_text_count
+    print " "
     print summary_text
     print "================================================================================"
     filename = options.date + '-billing-summary.csv'
@@ -102,6 +114,8 @@ def main():
     if not os.path.exists(filedir):
         os.makedirs(filedir)
     with open(os.path.join(filedir, filename), 'w') as f: 
+        f.write(summary_text_count)
+        f.write("")
         f.write(summary_text)
     
     # institute report
