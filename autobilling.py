@@ -23,6 +23,7 @@ from email import Encoders
 ANNE = 'anne.pajon@cruk.cam.ac.uk'
 JAMES = 'james.hadfield@cruk.cam.ac.uk'
 SARAH = 'sarah.leigh-brown@cruk.cam.ac.uk'
+KAREN = 'Karen.Martin@cruk.cam.ac.uk'
 
 def main():
     # get the options
@@ -111,7 +112,7 @@ def parse_billing_report(file_report):
 def send_email(lane_number, files):    
     msg = MIMEMultipart()
     send_from = ANNE
-    send_to = [ANNE, JAMES, SARAH]
+    send_to = [ANNE, JAMES, SARAH, KAREN]
     #send_to = [ANNE]
 
     msg['Subject'] = 'Automatic Billing Report Notification'
