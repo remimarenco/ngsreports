@@ -13,7 +13,7 @@ import argparse
 import string
 import locale
 
-locale.setlocale( locale.LC_ALL, '' )
+locale.setlocale( locale.LC_ALL, 'en_GB.UTF-8' )
 
 # email modules
 import smtplib
