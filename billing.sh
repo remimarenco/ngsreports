@@ -45,11 +45,8 @@ run() {
     # account query
     query $ACCOUNT_TEMPLATE $ACCOUNT_QUERY $ACCOUNT_CSV
 
-    # write reports
-    python $BASEDIR/reports.py --report=$BILLING_CSVOUT --accounts=$ACCOUNT_CSV --prices=$PRICES_CSV --date=$GROUPREPORT_DATE --outputdir=$BASEDIR
-
-    # write comparison & send email notification
-    python $BASEDIR/autobilling.py --last-month-report=$BILLING_LASTCVSOUT --this-month-report=$BILLING_CSVOUT --output=$COMPAREOUT --email
+    # write reports, comparison & send email notification
+    python $BASEDIR/reports.py --report=$BILLING_CSVOUT --previous-report=$BILLING_LASTCVSOUT --accounts=$ACCOUNT_CSV --prices=$PRICES_CSV --date=$GROUPREPORT_DATE --outputdir=$BASEDIR --email
 
     # qc query
     query $QC_TEMPLATE $QC_QUERY $QC_CSVOUT
