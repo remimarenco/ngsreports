@@ -105,6 +105,7 @@ def main():
     print "================================================================================"
     print "Billing Summary Report for %s" % options.date
     print "================================================================================"
+    # ADD full today
     categories = sorted(sequencing_by_runtype.keys())
     total = defaultdict(int)
     total_count = defaultdict(int)
@@ -269,8 +270,9 @@ def main():
     this_month_data, this_month_non_billable_data = parse_billing_report_for_comparison(options.report)
     last_month_data, last_month_non_billable_data = parse_billing_report_for_comparison(options.previous_report)
     
-    # get all new lanes and count billable duplicated ones
+    # get all new lanes and count billable duplicated ones for this month
     new_lanes = []
+    dup_lanes = []
     billable_dup = 0
     billable_not_this_month = 0
     new_lane_number = 0
@@ -279,10 +281,11 @@ def main():
             billable_flag=False
             for v in value:
                 content = v.split(';')
-                if content[2] == 'Bill':
+                if content[2] == 'Bill' and content[3] == options.date:
                     billable_flag=True
             if billable_flag:
                 billable_dup += 1
+                dup_lanes.append(value)
         if not key in last_month_data.keys():
             content = value[0].split(';')
             if not content[3] == options.date:
@@ -294,14 +297,18 @@ def main():
     hiseq_non_billable = 0
     miseq_non_billable = 0
     non_billable = 0
+    non_billable_lanes = []
     for key, value in this_month_non_billable_data.iteritems():
         if not key in last_month_non_billable_data.keys():
             content = value[0].split(';')
-            if content[1].lower().startswith('hiseq'):
-                hiseq_non_billable += 1
-            if content[1].lower().startswith('miseq'):
-                miseq_non_billable += 1
-            non_billable += 1
+            if content[3] == options.date:
+                if content[1].lower().startswith('hiseq'):
+                    hiseq_non_billable += 1
+                if content[1].lower().startswith('miseq'):
+                    miseq_non_billable += 1
+                non_billable += 1
+                if not content[2]:
+                    non_billable_lanes.append(value)
     
     # compare billing reports & create report
     print "================================================================================"
@@ -323,7 +330,7 @@ def main():
     comparison_text += "- MiSeq total read sum: %s\n" % locale.format("%.0f", miseq_total_yield, grouping=True)
     comparison_text += "- MiSeq total charged cost: %s\n" % locale.currency(miseq_total_spent, grouping=True) 
     comparison_text += "\n"
-    comparison_text += "- Number of lanes without 'Bill' status: %s\n" % non_billable
+    comparison_text += "- Number of lanes without billable status: %s\n" % non_billable
     comparison_text += "\n"
     comparison_text += "- Number of lanes duplicated and billed: %s\n" % billable_dup
     comparison_text += "\n"
@@ -354,6 +361,26 @@ def main():
                 comparison_text += "---\n"
                 comparison_text += "NEW: %s\n" % this_month_data[key]
                 comparison_text += "OLD: %s\n" % value
+    if no_lane:
+        comparison_text += "none\n"
+    comparison_text += "\n"  
+    comparison_text += "- Lanes duplicated and billed in this report: \n"
+    no_lane = True
+    i = 0
+    for item in dup_lanes:
+        no_lane = False
+        i += 1
+        comparison_text += "%s\t%s\n" % (i, item)
+    if no_lane:
+        comparison_text += "none\n"
+    comparison_text += "\n"  
+    comparison_text += "- Lanes without billable status in this report: \n"
+    no_lane = True
+    i = 0
+    for item in non_billable_lanes:
+        no_lane = False
+        i += 1
+        comparison_text += "%s\t%s\n" % (i, item)
     if no_lane:
         comparison_text += "none\n"
     comparison_text += "\n"
@@ -432,7 +459,7 @@ def parse_billing_report(file_report, month):
     with open (file_report, "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
-            if line['billingmonth'] == month:
+            if line['billable'] == 'Bill' and line['billingmonth'] == month:
                 key = "_".join([line['flowcellid'], line['lane'], line['slxid']])
                 line['cycles'] = convert_runtype_into_cycles(line['runtype'].split('_'))
                 if line['yield']:
@@ -448,7 +475,7 @@ def parse_billing_report(file_report, month):
                         line['runtype'] = 'MiSeq_UpTo150'
                     else:
                         line['runtype'] = 'MiSeq_UpTo600'
-                data[key] = line
+                data[key] = line                    
     return data
         
 def convert_runtype_into_cycles(runtype):
