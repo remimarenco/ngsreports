@@ -158,8 +158,8 @@ def main():
         grand_total_spent += total[cat]
         summary_line_count += '%s\t' % total_count[cat]
     grand_total_count = hiseq_total_count + miseq_total_count
-    summary_text += summary_line + '\n'
-    summary_text_count += summary_line_count + '\n'
+    summary_text += summary_line + '\t%s\n' % grand_total_spent
+    summary_text_count += summary_line_count + '\t%s\n' % grand_total_count
     print summary_text_count
     print " "
     print summary_text
@@ -302,13 +302,14 @@ def main():
         if not key in last_month_non_billable_data.keys():
             content = value[0].split(';')
             if content[3] == options.date:
-                if content[1].lower().startswith('hiseq'):
-                    hiseq_non_billable += 1
-                if content[1].lower().startswith('miseq'):
-                    miseq_non_billable += 1
-                non_billable += 1
                 if not content[2]:
                     non_billable_lanes.append(value)
+                    non_billable += 1
+                else:
+                    if content[1].lower().startswith('hiseq'):
+                        hiseq_non_billable += 1
+                    if content[1].lower().startswith('miseq'):
+                        miseq_non_billable += 1
     
     # compare billing reports & create report
     print "================================================================================"
