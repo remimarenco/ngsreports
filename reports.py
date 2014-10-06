@@ -158,7 +158,7 @@ def main():
         grand_total_spent += total[cat]
         summary_line_count += '%s\t' % total_count[cat]
     grand_total_count = hiseq_total_count + miseq_total_count
-    summary_text += summary_line + '\t%s\n' % grand_total_spent
+    summary_text += summary_line + '\t£%.2f\n' % grand_total_spent
     summary_text_count += summary_line_count + '\t%s\n' % grand_total_count
     print summary_text_count
     print " "
@@ -171,7 +171,8 @@ def main():
     billing_summary_file = os.path.join(filedir, filename)
     with open(billing_summary_file, 'w') as f: 
         f.write(summary_text_count)
-        f.write("")
+        f.write("\n")
+        f.write("\n")
         f.write(summary_text)
     
     # institute report
@@ -322,13 +323,13 @@ def main():
     comparison_text += "- HiSeq total number of lanes: %s\n" % hiseq_total_count
     comparison_text += "- HiSeq 'Do Not Bill' lanes: %s\n" % hiseq_non_billable
     comparison_text += "- HiSeq external lanes: %s\n" % external_hiseq_total_count
-    comparison_text += "- HiSeq total read sum: %s\n" % locale.format("%.0f", hiseq_total_yield, grouping=True)
+    comparison_text += "- HiSeq total read sum: %s million\n" % locale.format("%.0f", hiseq_total_yield, grouping=True)
     comparison_text += "- HiSeq total charged cost: %s\n" % locale.currency(hiseq_total_spent, grouping=True) 
     comparison_text += "\n"
     comparison_text += "- MiSeq total number of lanes: %s\n" % miseq_total_count
     comparison_text += "- MiSeq 'Do Not Bill' lanes: %s\n" % miseq_non_billable
     comparison_text += "- MiSeq external lanes: %s\n" % external_miseq_total_count
-    comparison_text += "- MiSeq total read sum: %s\n" % locale.format("%.0f", miseq_total_yield, grouping=True)
+    comparison_text += "- MiSeq total read sum: %s million\n" % locale.format("%.0f", miseq_total_yield, grouping=True)
     comparison_text += "- MiSeq total charged cost: %s\n" % locale.currency(miseq_total_spent, grouping=True) 
     comparison_text += "\n"
     comparison_text += "- Number of lanes without billable status: %s\n" % non_billable
