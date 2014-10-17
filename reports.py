@@ -5,7 +5,6 @@ reports.py
 
 Created by Anne Pajon on 2014-01-31.
 """
-import sys
 import os
 import csv
 from collections import defaultdict
@@ -13,7 +12,7 @@ import argparse
 import string
 import locale
 
-locale.setlocale( locale.LC_ALL, 'en_GB.UTF-8' )
+locale.setlocale(locale.LC_ALL, 'en_GB.UTF-8')
 
 # email modules
 import smtplib
@@ -46,37 +45,44 @@ def main():
     # billing and group report
     data = parse_billing_report(options.report, options.date)
     
-    institute_sequencing_by_runtype = defaultdict(lambda : defaultdict(int))
-    sequencing_by_runtype = defaultdict(lambda : defaultdict(int))
+    institute_sequencing_by_runtype = defaultdict(lambda: defaultdict(int))
+    sequencing_by_runtype = defaultdict(lambda: defaultdict(int))
     all_institutes = set()
     all_groups = set()
-    group_hiseq_usage = defaultdict(lambda : defaultdict(int))
-    lab_member_hiseq_usage = defaultdict(lambda : defaultdict(int))
-    group_miseq_usage = defaultdict(lambda : defaultdict(int))
-    lab_member_miseq_usage = defaultdict(lambda : defaultdict(int))
+    group_hiseq_usage = defaultdict(lambda: defaultdict(int))
+    lab_member_hiseq_usage = defaultdict(lambda: defaultdict(int))
+    group_miseq_usage = defaultdict(lambda: defaultdict(int))
+    lab_member_miseq_usage = defaultdict(lambda: defaultdict(int))
     billing_table_by_institute = defaultdict(str)
     billing_table_by_group = defaultdict(str)
     
     # institute template
-    with open (os.path.join(os.path.dirname(__file__), 'js', 'institute-report-template.html'), "r") as f:
+    with open(os.path.join(os.path.dirname(__file__), 'js', 'institute-report-template.html'), "r") as f:
         institute_template = f.read()
 
     # group template
-    with open (os.path.join(os.path.dirname(__file__), 'js', 'group-report-template.html'), "r") as f:
+    with open(os.path.join(os.path.dirname(__file__), 'js', 'group-report-template.html'), "r") as f:
         group_template = f.read()
         
     # group accounts
     group_accounts = defaultdict(dict)
-    group_types = defaultdict(dict)
-    with open (options.accounts, "U") as f:
+    group_external = defaultdict(str)
+    group_collaboration = defaultdict(str)
+    institute_groups = defaultdict(str)
+    with open(options.accounts, "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
             group_accounts[line['group']] = line['pricing']
-            group_types[line['group']] = line['external']
-            
+            group_external[line['group']] = line['external']
+            if line['collaboration'] == 'False':
+                group_collaboration[line['group']] = 'N'
+            else:
+                group_collaboration[line['group']] = 'Y'
+            institute_groups[line['group']] = line['institute']
+
     # prices
     runtype_prices = defaultdict(dict)
-    with open (options.prices, "U") as f:
+    with open(options.prices, "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
             runtype_prices[line['Run Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.2)': line['Ad hoc (x1.2)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
@@ -84,6 +90,7 @@ def main():
     # billing data
     hiseq_total_yield = 0
     miseq_total_yield = 0
+    billing_codes = defaultdict(set)
     for key, value in data.iteritems():
         institute_sequencing_by_runtype[value['runtype']][value['institute']] += 1
         sequencing_by_runtype[value['runtype']][value['lab']] += 1
@@ -102,6 +109,9 @@ def main():
             lab_member_miseq_usage[value['lab']][value['researcher']] += int(value['cycles'])
             miseq_total_yield += value['yield_value']
 
+        if value['billingcode'] and (group_external[value['lab']] == 'False' or group_collaboration[value['lab']] == 'Y'):
+            billing_codes[value['lab']].add(value['billingcode'])
+
     print "================================================================================"
     print "Billing Summary Report for %s" % options.date
     print "================================================================================"
@@ -109,18 +119,16 @@ def main():
     categories = sorted(sequencing_by_runtype.keys())
     total = defaultdict(int)
     total_count = defaultdict(int)
-    summary_header = 'group\t'
-    summary_text = ''
-    summary_text_count = ''
+    summary_header = 'institute\tgroup\toutside_collaboration\t'
     for cat in categories:
         summary_header += '%s\t' % cat
-    summary_text = summary_header + '\ttotal\n'
-    summary_text_count = summary_header + '\ttotal\n'
+    summary_text = summary_header + '\ttotal\tbilling_codes\n'
+    summary_text_count = summary_header + '\ttotal\tbilling_codes\n'
     external_hiseq_total_count = 0
     external_miseq_total_count = 0
     for group in group_accounts.keys():
-        summary_line = group + '\t'
-        summary_line_count = group + '\t'
+        summary_line = institute_groups[group] + '\t' + group + '\t' + group_collaboration[group] + '\t'
+        summary_line_count = institute_groups[group] + '\t' + group + '\t' + group_collaboration[group] + '\t'
         group_total = 0
         group_total_count = 0
         for cat in categories:
@@ -132,13 +140,13 @@ def main():
             summary_line_count += '%s\t' % count
             group_total_count += count
             total_count[cat] += count
-            if group_types[group] == 'True':
+            if group_external[group] == 'True':
                 if cat.lower().startswith('hiseq'):
                     external_hiseq_total_count += count
                 if cat.lower().startswith('miseq'):
                     external_miseq_total_count += count
-        summary_text += summary_line + '\t£%.2f\n' % group_total
-        summary_text_count += summary_line_count + '\t%s\n' % group_total_count
+        summary_text += summary_line + '\t£%.2f\t[%s]\n' % (group_total, ", ".join(str(e) for e in billing_codes[group]))
+        summary_text_count += summary_line_count + '\t%s\t[%s]\n' % (group_total_count, ", ".join(str(e) for e in billing_codes[group]))
     summary_line = 'total\t'
     hiseq_total_spent = 0
     miseq_total_spent = 0
@@ -146,7 +154,6 @@ def main():
     summary_line_count = 'total\t'
     hiseq_total_count = 0
     miseq_total_count = 0
-    grand_total_count = 0    
     for cat in categories:
         summary_line += '£%.2f\t' % total[cat]
         if cat.lower().startswith('hiseq'):
@@ -189,8 +196,8 @@ def main():
                     others_value += institute_sequencing_by_runtype[key][other_institute]
 
             total_value = institute_value + others_value
-            institute_data.append(institute_value*100.0/float(total_value))
-            others_data.append(100 - institute_value*100.0/float(total_value))
+            institute_data.append(institute_value * 100.0 / float(total_value))
+            others_data.append(100 - institute_value * 100.0 / float(total_value))
                 
         hiseq = ''
         for key in group_hiseq_usage[institute].keys():
@@ -217,7 +224,7 @@ def main():
         filedir = os.path.join(options.outputdir, 'institutes')
         if not os.path.exists(filedir):
             os.makedirs(filedir)
-        with open(os.path.join(filedir, filename),'w') as f:
+        with open(os.path.join(filedir, filename), 'w') as f:
             f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'date': options.date, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
 
     # group report
@@ -234,8 +241,8 @@ def main():
                     others_value += sequencing_by_runtype[key][other_group]
 
             total_value = group_value + others_value
-            group_data.append(group_value*100.0/total_value)
-            others_data.append(100 - group_value*100.0/total_value)
+            group_data.append(group_value * 100.0 / total_value)
+            others_data.append(100 - group_value * 100.0 / total_value)
                 
         hiseq = ''
         for key in lab_member_hiseq_usage[group].keys():
@@ -261,7 +268,7 @@ def main():
         filedir = os.path.join(options.outputdir, 'groups')
         if not os.path.exists(filedir):
             os.makedirs(filedir)
-        with open(os.path.join(filedir, filename),'w') as f:
+        with open(os.path.join(filedir, filename), 'w') as f:
             f.write(string.Template(group_template).safe_substitute({'categories': categories, 'group': group, 'date': options.date, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
     
     # ----------
@@ -279,11 +286,11 @@ def main():
     new_lane_number = 0
     for key, value in this_month_data.iteritems():
         if len(value) > 1:
-            billable_flag=False
+            billable_flag = False
             for v in value:
                 content = v.split(';')
                 if content[2] == 'Bill' and content[3] == options.date:
-                    billable_flag=True
+                    billable_flag = True
             if billable_flag:
                 billable_dup += 1
                 dup_lanes.append(value)
@@ -345,7 +352,7 @@ def main():
     comparison_text += "--------------------------------------------------------------------------------\n"
     comparison_text += "COMPARISON WITH LAST MONTH\n"
     comparison_text += "\n"  
-    comparison_text += "- Lanes missing since last report: \n" #  key [flowcellid_lane] in last report but not found in this one
+    comparison_text += "- Lanes missing since last report: \n"  # key [flowcellid_lane] in last report but not found in this one
     no_lane = True
     for key, value in last_month_data.iteritems():
         if not key in this_month_data.keys():
@@ -354,7 +361,7 @@ def main():
     if no_lane:
         comparison_text += "none\n"
     comparison_text += "\n"  
-    comparison_text += "- Lanes changed since last report: \n" #  key with value ['SLXID;run_type;billing_status;billing_month;flowcellid;lane] in last report which do not match in this one        
+    comparison_text += "- Lanes changed since last report: \n"  # key with value ['SLXID;run_type;billing_status;billing_month;flowcellid;lane] in last report which do not match in this one
     no_lane = True
     for key, value in last_month_data.iteritems():
         if key in this_month_data.keys():
@@ -409,11 +416,10 @@ def main():
         send_email(new_lane_number, [options.report, comparison_report_file, billing_summary_file], options.date)
     
     
-
 def parse_billing_report_for_comparison(file_report):
     data = defaultdict(list)
-    non_billable_data =  defaultdict(list)
-    with open (file_report, "U") as f:
+    non_billable_data = defaultdict(list)
+    with open(file_report, "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
             if line['billable'] == 'Bill':
@@ -423,7 +429,8 @@ def parse_billing_report_for_comparison(file_report):
                 key = "%s_%s" % (line['flowcellid'], line['lane'])
                 non_billable_data[key].append(';'.join([line['slxid'], line['runtype'], line['billable'], line['billingmonth'], line['flowcellid'], line['lane']])) 
     return data, non_billable_data
-    
+
+
 def send_email(lane_number, files, month):    
     msg = MIMEMultipart()
     send_from = ANNE
@@ -433,7 +440,7 @@ def send_email(lane_number, files, month):
     msg['Subject'] = 'Automatic Billing Report Notification - %s' % month
     msg['From'] = ANNE
     msg['To'] = ','.join(send_to)
-    msg.attach( MIMEText("""
+    msg.attach(MIMEText("""
     There are %s new lanes in this month billing report.
     Please find attached the billing data, the comparison report and the billing summary files.
     
@@ -447,7 +454,7 @@ def send_email(lane_number, files, month):
     """ % lane_number))
     for f in files:
         part = MIMEBase('application', "octet-stream")
-        part.set_payload( open(f,"rb").read() )
+        part.set_payload(open(f, "rb").read())
         Encoders.encode_base64(part)
         part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(f))
         msg.attach(part)
@@ -456,9 +463,10 @@ def send_email(lane_number, files, month):
     s.sendmail(send_from, send_to, msg.as_string())
     s.quit()
 
+
 def parse_billing_report(file_report, month):
     data = defaultdict(dict)
-    with open (file_report, "U") as f:
+    with open(file_report, "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
             if line['billable'] == 'Bill' and line['billingmonth'] == month:
@@ -471,7 +479,7 @@ def parse_billing_report(file_report, month):
                     line['yield'] = 'N/A'
                     line['yield_value'] = 0.0
                     print 'no yield for %s' % key
-                line['runtype'] = line['runtype'].replace('V3','').replace('V2','')
+                line['runtype'] = line['runtype'].replace('V3', '').replace('V2', '')
                 if line['runtype'].lower().startswith('miseq'):
                     if line['cycles'] <= 150:
                         line['runtype'] = 'MiSeq_UpTo150'
@@ -480,6 +488,7 @@ def parse_billing_report(file_report, month):
                 data[key] = line                    
     return data
         
+
 def convert_runtype_into_cycles(runtype):
     print runtype
     if not runtype[0]:
@@ -488,12 +497,12 @@ def convert_runtype_into_cycles(runtype):
         if runtype[1].startswith('SE'):
             return int(runtype[1][2:])
         elif runtype[1].startswith('PE'):
-            return int(runtype[1][2:])*2
+            return int(runtype[1][2:]) * 2
     elif runtype[0].lower().startswith('qaiix'):
         if runtype[1].startswith('SE'):
             return int(runtype[1][2:])
         elif runtype[1].startswith('PE'):
-            return int(runtype[1][2:])*2
+            return int(runtype[1][2:]) * 2
     else:
         return int(runtype[1])
 
