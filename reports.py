@@ -437,10 +437,10 @@ def send_email(lane_number, files, month):
     There are %s new lanes in this month billing report.
     Please find attached the billing data, the comparison report and the billing summary files.
     
-    Billing reports: http://uk-cri-lsol03.crnet.org:8080/solexa/home/mib-cri/solexa/ngsreports/billing/
-    Summary reports: http://uk-cri-lsol03.crnet.org:8080/solexa/home/mib-cri/solexa/ngsreports/summaries/
-    Group reports: http://uk-cri-lsol03.crnet.org:8080/solexa/home/mib-cri/solexa/ngsreports/groups/
-    Institute reports: http://uk-cri-lsol03.crnet.org:8080/solexa/home/mib-cri/solexa/ngsreports/institutes/
+    Billing reports: http://sol-srv004.cri.camres.org/ngsreports/billing/
+    Summary reports: http://sol-srv004.cri.camres.org/ngsreports/summaries/
+    Group reports: http://sol-srv004.cri.camres.org/ngsreports/groups/
+    Institute reports: http://sol-srv004.cri.camres.org/ngsreports/institutes/
     --
     Anne Pajon, CRI Bioinformatics Core
     anne.pajon@cruk.cam.ac.uk | +44 (0)1223 769 631
