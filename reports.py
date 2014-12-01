@@ -11,6 +11,7 @@ from collections import defaultdict
 import argparse
 import string
 import locale
+import subprocess
 
 locale.setlocale(locale.LC_ALL, 'en_GB.UTF-8')
 
@@ -26,6 +27,22 @@ ANNE = 'anne.pajon@cruk.cam.ac.uk'
 JAMES = 'james.hadfield@cruk.cam.ac.uk'
 SARAH = 'sarah.leigh-brown@cruk.cam.ac.uk'
 KAREN = 'Karen.Martin@cruk.cam.ac.uk'
+HELPDESK = 'genomics-helpdesk@cruk.cam.ac.uk'
+
+def pricing_version(pricing_summary_table_file):
+    cmd = ["svn", "info", pricing_summary_table_file]
+    process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    out = process.communicate()[0]
+    lines = out.split('\n')
+    version = 'Version information of pricing filename '
+    for line in lines:
+        if line.startswith('Name:'):
+            version += "'" + line.split()[1] + "': ["
+        if line.startswith('Revision:'):
+            version += line + '; '
+        if line.startswith('Last Changed Date:'):
+            version += line + ']'
+    return version
 
 
 def main():
@@ -35,6 +52,7 @@ def main():
     parser.add_argument("--previous-report", dest="previous_report", action="store", help="path to billing report '/path/to/billing/report/201402-billing.csv'", required=True)
     parser.add_argument("--accounts", dest="accounts", action="store", help="path to the list of the group accounts '/path/to/billing/report/201402-account.csv'", required=True)
     parser.add_argument("--prices", dest="prices", action="store", help="path to the pricing summary table '/path/to/PricingSummaryTable.txt'", required=True)
+    parser.add_argument("--notifications", dest="notifications", action="store", help="path to the billing notification file '/path/to/BillingNotificationContacts.txt'")
     parser.add_argument("--date", dest="date", action="store", help="date to produce group reports e.g. '2014-01'", required=True)
     parser.add_argument("--outputdir", dest="outputdir", action="store", help="path to the output folder '/path/to/billing/'", required=True)
     parser.add_argument("--email", dest="email", action="store_true", default=False, help="Send email to genomics with monthly billing report and comparison")
@@ -87,6 +105,9 @@ def main():
         for line in reader:
             runtype_prices[line['Run Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.2)': line['Ad hoc (x1.2)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
 
+    with open(options.prices, "U") as f:
+        summary_prices = f.read()
+
     # billing data
     hiseq_total_yield = 0
     miseq_total_yield = 0
@@ -94,8 +115,11 @@ def main():
     for key, value in data.iteritems():
         institute_sequencing_by_runtype[value['runtype']][value['institute']] += 1
         sequencing_by_runtype[value['runtype']][value['lab']] += 1
-        
-        billing_table_by_institute[value['institute']] += '["%s", "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s"],' % (value['lab'], value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'])
+
+        price = ''
+        if value['billable'] == 'Bill':
+            price = runtype_prices[value['runtype']][group_accounts[value['lab']]]
+        billing_table_by_institute[value['institute']] += '["%s", "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s", "£%s"],' % (value['lab'], value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'], price)
         billing_table_by_group[value['lab']] += '[ "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s"],' % (value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'])
         
         all_institutes.add(value['institute'])
@@ -181,7 +205,13 @@ def main():
         f.write("\n")
         f.write("\n")
         f.write(summary_text)
-    
+        f.write("\n")
+        f.write("\n")
+        f.write(summary_prices)
+        f.write("\n")
+        f.write("\n")
+        f.write(pricing_version(options.prices))
+
     # institute report
     for institute in all_institutes:
         institute_data = []
@@ -414,8 +444,25 @@ def main():
     # send report by email
     if options.email:
         send_email(new_lane_number, [options.report, comparison_report_file, billing_summary_file], options.date)
-    
-    
+
+    # ----------
+    # Institute billing notification
+    if options.notifications:
+        institute_contacts = defaultdict(dict)
+        with open(options.notifications, "U") as f:
+            reader = csv.DictReader(f, delimiter='\t')
+            for line in reader:
+                institute_contacts[line['institute']] = {'emails': line['emails'], 'names': line['names']}
+                filename = options.date + '-' + line['institute'].replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
+                filedir = os.path.join(options.outputdir, 'institutes')
+                institute_report = os.path.join(filedir, filename)
+                if os.path.exists(institute_report):
+                    send_notification([ANNE], [institute_report], options.date, line['names'], line['institute'])
+                    print 'Email sent to', line['institute'], 'with', institute_report
+                else:
+                    print 'FILE DO NOT EXISTS', institute_report
+
+
 def parse_billing_report_for_comparison(file_report):
     data = defaultdict(list)
     non_billable_data = defaultdict(list)
@@ -459,9 +506,47 @@ def send_email(lane_number, files, month):
         part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(f))
         msg.attach(part)
 
-    s = smtplib.SMTP('localhost')
+    s = smtplib.SMTP('smtp.cruk.cam.ac.uk')
     s.sendmail(send_from, send_to, msg.as_string())
     s.quit()
+
+
+def send_notification(send_to, files, month, names, institute):
+    msg = MIMEMultipart()
+    send_from = HELPDESK
+    #send_to = [ANNE, JAMES, SARAH, KAREN]
+    #send_to = [ANNE]
+
+    msg['Subject'] = 'CRUK-CIGC Automated Billing Report of %s' % month
+    msg['From'] = HELPDESK
+    msg['To'] = ','.join(send_to)
+    msg.attach(MIMEText("""Dear %(names)s,
+
+Attached is the automated billing report of %(month)s from our LIMs showing the lane-by-lane breakdown of the %(institute)s usage of the HiSeq 2500 reagent rental collaboration.
+
+You can see which individuals have been using the service, and what sort of sequencing they have been doing. This data should be all you require to complete and cross-charging within the %(institute)s.
+
+If there are any issues with this report please quote the SLX-ID of the lanes in question and contact us at genomics-helpdesk@cruk.cam.ac.uk.
+
+Please do contact me if you have any questions about this.
+Sincerely,
+James.
+--
+Cambridge Institute Genomics Core (CIGC)
+genomics-helpdesk@cruk.cam.ac.uk
+    """ % {'names': names, 'month': month, 'institute': institute}))
+
+    for f in files:
+        part = MIMEBase('application', "octet-stream")
+        part.set_payload(open(f, "rb").read())
+        Encoders.encode_base64(part)
+        part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(f))
+        msg.attach(part)
+
+
+    mail = smtplib.SMTP('smtp.cruk.cam.ac.uk')
+    mail.sendmail(send_from, send_to, msg.as_string())
+    mail.quit()
 
 
 def parse_billing_report(file_report, month):

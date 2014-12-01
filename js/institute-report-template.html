@@ -165,6 +165,11 @@
         $(document).ready(function() {
             $('#billing').html( '<table cellpadding="0" cellspacing="0" border="0" class="display" id="example"></table>' );
             $('#example').dataTable( {
+                aLengthMenu: [
+                    [25, 50, 100, 200, -1],
+                    [25, 50, 100, 200, "All"]
+                ],
+                iDisplayLength: -1,
                 "aaData": [
                     $billing_table
                 ],
@@ -177,7 +182,8 @@
                     { "sTitle": "Lane"},
                     { "sTitle": "Yield (M reads)"},
                     { "sTitle": "Billable"},
-                    { "sTitle": "Billing month"}
+                    { "sTitle": "Billing month"},
+                    { "sTitle": "Cost"}
                 ]
             } );   
         } );
