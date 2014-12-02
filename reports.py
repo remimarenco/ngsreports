@@ -522,9 +522,9 @@ def send_notification(send_to, files, month, names, institute):
     msg['To'] = ','.join(send_to)
     msg.attach(MIMEText("""Dear %(names)s,
 
-Attached is the automated billing report of %(month)s from our LIMs showing the lane-by-lane breakdown of the %(institute)s usage of the HiSeq 2500 reagent rental collaboration.
+Attached is the automated billing report of %(month)s from our LIMs showing the lane-by-lane breakdown of the %(institute)s usage of the HiSeq 2500 reagent rental collaboration, and your use of our MiSeq instruments.
 
-You can see which individuals have been using the service, and what sort of sequencing they have been doing. This data should be all you require to complete and cross-charging within the %(institute)s.
+You can see which individuals have been using the service, what sort of sequencing they have been doing and what the cost per lane was for each lane processed. This data should be all you require to complete and cross-charging within the %(institute)s.
 
 If there are any issues with this report please quote the SLX-ID of the lanes in question and contact us at genomics-helpdesk@cruk.cam.ac.uk.
 
