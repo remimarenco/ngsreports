@@ -18,6 +18,7 @@ run() {
     BILLING_DATE=$1
     BILLING_PREVDATE=$2
     GROUPREPORT_DATE=$3
+    NOTIFICATIONS=$4
     
     BASEDIR=$(dirname $0)
     SQLDIR=$BASEDIR/sql/
@@ -46,7 +47,7 @@ run() {
     query $ACCOUNT_TEMPLATE $ACCOUNT_QUERY $ACCOUNT_CSV
 
     # write reports, comparison & send email notification
-    python $BASEDIR/reports.py --report=$BILLING_CSVOUT --previous-report=$BILLING_LASTCVSOUT --accounts=$ACCOUNT_CSV --prices=$PRICES_CSV --date=$GROUPREPORT_DATE --outputdir=$BASEDIR --email
+    python $BASEDIR/reports.py --report=$BILLING_CSVOUT --previous-report=$BILLING_LASTCVSOUT --accounts=$ACCOUNT_CSV --prices=$PRICES_CSV --notifications=$NOTIFICATIONS --date=$GROUPREPORT_DATE --outputdir=$BASEDIR --email
 
     # qc query
     query $QC_TEMPLATE $QC_QUERY $QC_CSVOUT
