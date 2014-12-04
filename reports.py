@@ -482,7 +482,6 @@ def send_email(lane_number, files, month):
     msg = MIMEMultipart()
     send_from = ANNE
     send_to = [ANNE, JAMES, SARAH, KAREN]
-    #send_to = [ANNE]
 
     msg['Subject'] = 'Automatic Billing Report Notification - %s' % month
     msg['From'] = ANNE
@@ -514,8 +513,6 @@ def send_email(lane_number, files, month):
 def send_notification(send_to, files, month, names, institute):
     msg = MIMEMultipart()
     send_from = HELPDESK
-    #send_to = [ANNE, JAMES, SARAH, KAREN]
-    #send_to = [ANNE]
 
     msg['Subject'] = 'CRUK-CIGC Automated Billing Report of %s' % month
     msg['From'] = HELPDESK
@@ -543,9 +540,8 @@ genomics-helpdesk@cruk.cam.ac.uk
         part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(f))
         msg.attach(part)
 
-
     mail = smtplib.SMTP('smtp.cruk.cam.ac.uk')
-    mail.sendmail(send_from, send_to, msg.as_string())
+    mail.sendmail(send_from, send_to + [ANNE], msg.as_string())
     mail.quit()
 
 
