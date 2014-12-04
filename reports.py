@@ -541,7 +541,7 @@ genomics-helpdesk@cruk.cam.ac.uk
         msg.attach(part)
 
     mail = smtplib.SMTP('smtp.cruk.cam.ac.uk')
-    mail.sendmail(send_from, send_to + [ANNE], msg.as_string())
+    mail.sendmail(send_from, send_to + [ANNE, SARAH, JAMES], msg.as_string())
     mail.quit()
 
 
