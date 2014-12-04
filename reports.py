@@ -457,7 +457,7 @@ def main():
                 filedir = os.path.join(options.outputdir, 'institutes')
                 institute_report = os.path.join(filedir, filename)
                 if os.path.exists(institute_report):
-                    send_notification([ANNE], [institute_report], options.date, line['names'], line['institute'])
+                    send_notification(line['emails'].split(','), [institute_report], options.date, line['names'], line['institute'])
                     print 'Email sent to', line['institute'], 'with', institute_report
                 else:
                     print 'FILE DO NOT EXISTS', institute_report
