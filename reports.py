@@ -382,7 +382,7 @@ def main():
     comparison_text += "--------------------------------------------------------------------------------\n"
     comparison_text += "COMPARISON WITH LAST MONTH\n"
     comparison_text += "\n"  
-    comparison_text += "- Lanes missing since last report: \n"  # key [flowcellid_lane] in last report but not found in this one
+    comparison_text += "- Lanes missing or set to 'Do not bill' since last report: \n"  # key [flowcellid_lane] in last report but not found in this one
     no_lane = True
     for key, value in last_month_data.iteritems():
         if not key in this_month_data.keys():
