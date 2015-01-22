@@ -33,6 +33,10 @@ run() {
     ACCOUNT_TEMPLATE=$SQLDIR/gls-account.sql
     ACCOUNT_QUERY=$OUTPUTDIR/$BILLING_DATE-gls-account.sql
     ACCOUNT_CSV=$OUTPUTDIR/$BILLING_DATE-account.csv
+
+    LPS_BILLING_TEMPLATE=$SQLDIR/gls-lps-billing.sql
+    LPS_BILLING_QUERY=$OUTPUTDIR/$BILLING_DATE-gls-lps-billing.sql
+    LPS_BILLING_CSV=$OUTPUTDIR/$BILLING_DATE-lps-billing.csv
     
     PRICES_CSV=$BASEDIR/pricing/PricingSummaryTable.txt
 
@@ -41,7 +45,10 @@ run() {
     QC_CSVOUT=$OUTPUTDIR/$BILLING_DATE-qc.csv
 
     # billing query
-    query $BILLING_TEMPLATE $BILLING_QUERY $BILLING_CSVOUT 
+    query $BILLING_TEMPLATE $BILLING_QUERY $BILLING_CSVOUT
+
+    # LPS billing query
+    query $LPS_BILLING_TEMPLATE $LPS_BILLING_QUERY $LPS_BILLING_CSV
 
     # account query
     query $ACCOUNT_TEMPLATE $ACCOUNT_QUERY $ACCOUNT_CSV
