@@ -19,6 +19,7 @@ sample.name as samplename
 FROM process,
 processtype,
 processiotracker,
+outputmapping,
 artifact
 LEFT OUTER JOIN artifact_udf_view as audf1 on (audf1.artifactid=artifact.artifactid AND audf1.udfname = 'LPS - Billable'),
 artifact_sample_map,
@@ -36,7 +37,8 @@ AND processtype.displayname='LPS Complete'
 AND process.workstatus='COMPLETE'
 AND process.daterun >= '2014-04-01' AND process.daterun <= '2015-03-31'
 AND process.processid=processiotracker.processid
-AND processiotracker.inputartifactid=artifact.artifactid
+AND outputmapping.trackerid=processiotracker.trackerid
+AND outputmapping.outputartifactid=artifact.artifactid
 AND artifact_sample_map.artifactid=artifact.artifactid
 AND artifact_sample_map.processid=sample.processid
 AND sample.processid=sampleprocess.processid
