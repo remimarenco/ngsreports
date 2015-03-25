@@ -27,6 +27,7 @@ ANNE = 'anne.pajon@cruk.cam.ac.uk'
 JAMES = 'james.hadfield@cruk.cam.ac.uk'
 SARAH = 'sarah.leigh-brown@cruk.cam.ac.uk'
 KAREN = 'Karen.Martin@cruk.cam.ac.uk'
+ANNIE = 'Annie.Baxter@cruk.cam.ac.uk'
 HELPDESK = 'genomics-helpdesk@cruk.cam.ac.uk'
 
 def pricing_version(pricing_summary_table_file):
@@ -481,7 +482,7 @@ def parse_billing_report_for_comparison(file_report):
 def send_email(lane_number, files, month):    
     msg = MIMEMultipart()
     send_from = ANNE
-    send_to = [ANNE, JAMES, SARAH, KAREN]
+    send_to = [ANNE, JAMES, SARAH, KAREN, ANNIE]
 
     msg['Subject'] = 'Automatic Billing Report Notification - %s' % month
     msg['From'] = ANNE
