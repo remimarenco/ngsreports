@@ -519,7 +519,8 @@ def send_email(lane_number, files, month):
 
     s = smtplib.SMTP('smtp.cruk.cam.ac.uk')
     out = s.sendmail(send_from, send_to, msg.as_string())
-    log.error(out)
+    if out:
+        log.error(out)
     s.quit()
 
 
@@ -556,7 +557,8 @@ genomics-helpdesk@cruk.cam.ac.uk
 
     mail = smtplib.SMTP('smtp.cruk.cam.ac.uk')
     out = mail.sendmail(send_from, send_to + [ANNE, SARAH, JAMES], msg.as_string())
-    log.error(out)
+    if out:
+        log.error(out)
     mail.quit()
 
 
