@@ -15,6 +15,9 @@ import subprocess
 
 locale.setlocale(locale.LC_ALL, 'en_GB.UTF-8')
 
+# logging
+import log as logger
+
 # email modules
 import smtplib
 from email.MIMEText import MIMEText
@@ -29,6 +32,7 @@ SARAH = 'sarah.leigh-brown@cruk.cam.ac.uk'
 KAREN = 'Karen.Martin@cruk.cam.ac.uk'
 ANNIE = 'Annie.Baxter@cruk.cam.ac.uk'
 HELPDESK = 'genomics-helpdesk@cruk.cam.ac.uk'
+
 
 def pricing_version(pricing_summary_table_file):
     cmd = ["svn", "info", pricing_summary_table_file]
@@ -57,9 +61,15 @@ def main():
     parser.add_argument("--date", dest="date", action="store", help="date to produce group reports e.g. '2014-01'", required=True)
     parser.add_argument("--outputdir", dest="outputdir", action="store", help="path to the output folder '/path/to/billing/'", required=True)
     parser.add_argument("--email", dest="email", action="store_true", default=False, help="Send email to genomics with monthly billing report and comparison")
+    parser.add_argument("--logfile", dest="logfile", action="store", default=None, help="File to print logging information")
+    parser.add_argument("--nologemail", dest="nologemail", action="store_true", default=False, help="turn off sending log emails on error")
     #parser.add_argument("--cumulative", dest="cumulative", action="store_true", default=False, help="Produce a cumulative report till the date entered")
+
     options = parser.parse_args()
-    
+
+    # logging configuration
+    log = logger.get_custom_logger(options.logfile, options.nologemail)
+
     # ----------
     # billing and group report
     data = parse_billing_report(options.report, options.date)
@@ -137,9 +147,9 @@ def main():
         if value['billingcode'] and (group_external[value['lab']] == 'False' or group_collaboration[value['lab']] == 'Y'):
             billing_codes[value['lab']].add(value['billingcode'])
 
-    print "================================================================================"
-    print "Billing Summary Report for %s" % options.date
-    print "================================================================================"
+    log.info("================================================================================")
+    log.info("Billing Summary Report for %s" % options.date)
+    log.info("================================================================================")
     # ADD full today
     categories = sorted(sequencing_by_runtype.keys())
     total = defaultdict(int)
@@ -192,10 +202,10 @@ def main():
     grand_total_count = hiseq_total_count + miseq_total_count
     summary_text += summary_line + '\t£%.2f\n' % grand_total_spent
     summary_text_count += summary_line_count + '\t%s\n' % grand_total_count
-    print summary_text_count
-    print " "
-    print summary_text
-    print "================================================================================"
+    log.info(summary_text_count)
+    log.info(" ")
+    log.info(summary_text)
+    log.info("================================================================================")
     filename = options.date + '-billing-summary.csv'
     filedir = os.path.join(options.outputdir, 'summaries')
     if not os.path.exists(filedir):
@@ -351,9 +361,9 @@ def main():
                         miseq_non_billable += 1
     
     # compare billing reports & create report
-    print "================================================================================"
-    print "Billing Comparison Report for %s" % options.date
-    print "================================================================================"
+    log.info("================================================================================")
+    log.info("Billing Comparison Report for %s" % options.date)
+    log.info("================================================================================")
     comparison_text = "Billing Summary Report for %s\n" % options.date
     comparison_text += "--------------------------------------------------------------------------------\n"
     comparison_text += "THIS MONTH SUMMARY\n"
@@ -430,8 +440,8 @@ def main():
         new_lane_number += 1
         comparison_text += "%s\t%s\n" % (new_lane_number, item)
     comparison_text += "--------------------------------------------------------------------------------"
-    print comparison_text
-    print "================================================================================"
+    log.info(comparison_text)
+    log.info("================================================================================")
             
     filename = options.date + '-billing-comparison.txt'
     filedir = os.path.join(options.outputdir, 'summaries')
@@ -459,9 +469,9 @@ def main():
                 institute_report = os.path.join(filedir, filename)
                 if os.path.exists(institute_report):
                     send_notification(line['emails'].split(','), [institute_report], options.date, line['names'], line['institute'])
-                    print 'Email sent to', line['institute'], 'with', institute_report
+                    log.info('Email sent to', line['institute'], 'with', institute_report)
                 else:
-                    print 'FILE DO NOT EXISTS', institute_report
+                    log.info('FILE DO NOT EXISTS', institute_report)
 
 
 def parse_billing_report_for_comparison(file_report):
@@ -479,7 +489,8 @@ def parse_billing_report_for_comparison(file_report):
     return data, non_billable_data
 
 
-def send_email(lane_number, files, month):    
+def send_email(lane_number, files, month):
+    log = logger.get_custom_logger()
     msg = MIMEMultipart()
     send_from = ANNE
     send_to = [ANNE, JAMES, SARAH, KAREN, ANNIE]
@@ -507,11 +518,13 @@ def send_email(lane_number, files, month):
         msg.attach(part)
 
     s = smtplib.SMTP('smtp.cruk.cam.ac.uk')
-    s.sendmail(send_from, send_to, msg.as_string())
+    out = s.sendmail(send_from, send_to, msg.as_string())
+    log.error(out)
     s.quit()
 
 
 def send_notification(send_to, files, month, names, institute):
+    log = logger.get_custom_logger()
     msg = MIMEMultipart()
     send_from = HELPDESK
 
@@ -542,11 +555,13 @@ genomics-helpdesk@cruk.cam.ac.uk
         msg.attach(part)
 
     mail = smtplib.SMTP('smtp.cruk.cam.ac.uk')
-    mail.sendmail(send_from, send_to + [ANNE, SARAH, JAMES], msg.as_string())
+    out = mail.sendmail(send_from, send_to + [ANNE, SARAH, JAMES], msg.as_string())
+    log.error(out)
     mail.quit()
 
 
 def parse_billing_report(file_report, month):
+    log = logger.get_custom_logger()
     data = defaultdict(dict)
     with open(file_report, "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
@@ -560,7 +575,7 @@ def parse_billing_report(file_report, month):
                 else:
                     line['yield'] = 'N/A'
                     line['yield_value'] = 0.0
-                    print 'no yield for %s' % key
+                    log.warn('no yield for %s' % key)
                 line['runtype'] = line['runtype'].replace('V3', '').replace('V2', '')
                 if line['runtype'].lower().startswith('miseq'):
                     if line['cycles'] <= 150:
@@ -572,7 +587,6 @@ def parse_billing_report(file_report, month):
         
 
 def convert_runtype_into_cycles(runtype):
-    print runtype
     if not runtype[0]:
         return 0
     elif runtype[0].lower().startswith('hiseq') or runtype[0].lower().startswith('miseq'):

@@ -23,6 +23,7 @@ run() {
     BASEDIR=$(dirname $0)
     SQLDIR=$BASEDIR/sql/
     OUTPUTDIR=$BASEDIR/billing/
+    LOG=$BASEDIR/log/
 
     BILLING_TEMPLATE=$SQLDIR/gls-billing.sql
     BILLING_QUERY=$OUTPUTDIR/$BILLING_DATE-gls-billing.sql
@@ -54,7 +55,7 @@ run() {
     query $ACCOUNT_TEMPLATE $ACCOUNT_QUERY $ACCOUNT_CSV
 
     # write reports, comparison & send email notification
-    python $BASEDIR/reports.py --report=$BILLING_CSVOUT --previous-report=$BILLING_LASTCVSOUT --accounts=$ACCOUNT_CSV --prices=$PRICES_CSV --notifications=$NOTIFICATIONS --date=$GROUPREPORT_DATE --outputdir=$BASEDIR --email
+    python $BASEDIR/reports.py --report=$BILLING_CSVOUT --previous-report=$BILLING_LASTCVSOUT --accounts=$ACCOUNT_CSV --prices=$PRICES_CSV --notifications=$NOTIFICATIONS --date=$GROUPREPORT_DATE --outputdir=$BASEDIR --email --logfile=$LOG/ngsreports.log
 
     # qc query
     query $QC_TEMPLATE $QC_QUERY $QC_CSVOUT
