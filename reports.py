@@ -469,9 +469,9 @@ def main():
                 institute_report = os.path.join(filedir, filename)
                 if os.path.exists(institute_report):
                     send_notification(line['emails'].split(','), [institute_report], options.date, line['names'], line['institute'])
-                    log.info('Email sent to', line['institute'], 'with', institute_report)
+                    log.info('Email sent to ' + line['institute'] + ' with ' + institute_report)
                 else:
-                    log.info('FILE DO NOT EXISTS', institute_report)
+                    log.info('FILE DO NOT EXISTS: ' + institute_report)
 
 
 def parse_billing_report_for_comparison(file_report):
