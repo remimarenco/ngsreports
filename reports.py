@@ -28,7 +28,7 @@ from email import Encoders
 # email addresses
 ANNE = 'anne.pajon@cruk.cam.ac.uk'
 JAMES = 'james.hadfield@cruk.cam.ac.uk'
-SARAH = 'sarah.leigh-brown@cruk.cam.ac.uk'
+#SARAH = 'sarah.leigh-brown@cruk.cam.ac.uk'
 KAREN = 'Karen.Martin@cruk.cam.ac.uk'
 ANNIE = 'Annie.Baxter@cruk.cam.ac.uk'
 HELPDESK = 'genomics-helpdesk@cruk.cam.ac.uk'
@@ -53,8 +53,9 @@ def pricing_version(pricing_summary_table_file):
 def main():
     # get the options
     parser = argparse.ArgumentParser()
-    parser.add_argument("--report", dest="report", action="store", help="path to billing report '/path/to/billing/report/201402-billing.csv'", required=True)
-    parser.add_argument("--previous-report", dest="previous_report", action="store", help="path to billing report '/path/to/billing/report/201402-billing.csv'", required=True)
+    parser.add_argument("--report", dest="report", action="store", help="path to sequencing billing report '/path/to/billing/report/201402-billing.csv'", required=True)
+    parser.add_argument("--previous-report", dest="previous_report", action="store", help="path to last month sequencing billing report '/path/to/billing/report/201402-billing.csv'", required=True)
+    parser.add_argument("--lpsreport", dest="lpsreport", action="store", help="path to library prep billing report '/path/to/billing/report/201402-lps-billing.csv'")
     parser.add_argument("--accounts", dest="accounts", action="store", help="path to the list of the group accounts '/path/to/billing/report/201402-account.csv'", required=True)
     parser.add_argument("--prices", dest="prices", action="store", help="path to the pricing summary table '/path/to/PricingSummaryTable.txt'", required=True)
     parser.add_argument("--notifications", dest="notifications", action="store", help="path to the billing notification file '/path/to/BillingNotificationContacts.txt'")
@@ -84,15 +85,18 @@ def main():
     lab_member_miseq_usage = defaultdict(lambda: defaultdict(int))
     billing_table_by_institute = defaultdict(str)
     billing_table_by_group = defaultdict(str)
-    
+
+    # ----------
     # institute template
     with open(os.path.join(os.path.dirname(__file__), 'js', 'institute-report-template.html'), "r") as f:
         institute_template = f.read()
 
+    # ----------
     # group template
     with open(os.path.join(os.path.dirname(__file__), 'js', 'group-report-template.html'), "r") as f:
         group_template = f.read()
-        
+
+    # ----------
     # group accounts
     group_accounts = defaultdict(dict)
     group_external = defaultdict(str)
@@ -109,6 +113,7 @@ def main():
                 group_collaboration[line['group']] = 'Y'
             institute_groups[line['group']] = line['institute']
 
+    # ----------
     # prices
     runtype_prices = defaultdict(dict)
     with open(options.prices, "U") as f:
@@ -119,7 +124,8 @@ def main():
     with open(options.prices, "U") as f:
         summary_prices = f.read()
 
-    # billing data
+    # ----------
+    # billing summary report
     hiseq_total_yield = 0
     miseq_total_yield = 0
     billing_codes = defaultdict(set)
@@ -182,11 +188,11 @@ def main():
                     external_miseq_total_count += count
         summary_text += summary_line + '\t£%.2f\t[%s]\n' % (group_total, ", ".join(str(e) for e in billing_codes[group]))
         summary_text_count += summary_line_count + '\t%s\t[%s]\n' % (group_total_count, ", ".join(str(e) for e in billing_codes[group]))
-    summary_line = 'total\t'
+    summary_line = 'total\t\t\t'
     hiseq_total_spent = 0
     miseq_total_spent = 0
     grand_total_spent = 0
-    summary_line_count = 'total\t'
+    summary_line_count = 'total\t\t\t'
     hiseq_total_count = 0
     miseq_total_count = 0
     for cat in categories:
@@ -223,6 +229,46 @@ def main():
         f.write("\n")
         f.write(pricing_version(options.prices))
 
+    # ----------
+    # library prep billing summary report
+    if options.lpsreport:
+        lps_data = parse_lps_billing_report(options.lpsreport, options.date)
+        log.info("================================================================================")
+        log.info("Library Prep Billing Summary Report for %s" % options.date)
+        log.info("================================================================================")
+        summary_header = 'institute\tgroup\toutside_collaboration\tsamples\tbilling_codes\n'
+        summary_text = summary_header
+        summary_text_count = summary_header
+        grand_total_count = 0
+        grand_total_spent = 0
+        for group in group_accounts.keys():
+            count = 0
+            billing_codes = set()
+            for v in lps_data.values():
+                if v['lab'] == group:
+                    billing_codes.add(v['billingcode'])
+                    count += 1
+            #cost = count * float(lps_prices[group_accounts[group]])
+            cost = 0.0
+            summary_text += '%s\t%s\t%s\t£%.2f\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], cost, ", ".join(str(e) for e in billing_codes))
+            summary_text_count += '%s\t%s\t%s\t%s\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], count, ", ".join(str(e) for e in billing_codes))
+            grand_total_count += count
+            grand_total_spent += cost
+        summary_text += 'total\t\t\t£%.2f\n' % grand_total_spent
+        summary_text_count += 'total\t\t\t%s\n' % grand_total_count
+        log.info(summary_text_count)
+        log.info(" ")
+        log.info(summary_text)
+        log.info("================================================================================")
+        filename = options.date + '-lps-billing-summary.csv'
+        lps_billing_summary_file = os.path.join(filedir, filename)
+        with open(lps_billing_summary_file, 'w') as f:
+            f.write(summary_text_count)
+            f.write("\n")
+            f.write("\n")
+            f.write(summary_text)
+
+    # ----------
     # institute report
     for institute in all_institutes:
         institute_data = []
@@ -268,6 +314,7 @@ def main():
         with open(os.path.join(filedir, filename), 'w') as f:
             f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'date': options.date, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
 
+    # ----------
     # group report
     for group in all_groups:
         group_data = []
@@ -341,7 +388,7 @@ def main():
                 billable_not_this_month += 1
             new_lane_number += 1
             new_lanes.append(value) 
-            
+
     # non billable data
     hiseq_non_billable = 0
     miseq_non_billable = 0
@@ -359,7 +406,7 @@ def main():
                         hiseq_non_billable += 1
                     if content[1].lower().startswith('miseq'):
                         miseq_non_billable += 1
-    
+
     # compare billing reports & create report
     log.info("================================================================================")
     log.info("Billing Comparison Report for %s" % options.date)
@@ -493,7 +540,7 @@ def send_email(lane_number, files, month):
     log = logger.get_custom_logger()
     msg = MIMEMultipart()
     send_from = ANNE
-    send_to = [ANNE, JAMES, SARAH, KAREN, ANNIE]
+    send_to = [ANNE, JAMES, KAREN, ANNIE]
 
     msg['Subject'] = 'Automatic Billing Report Notification - %s' % month
     msg['From'] = ANNE
@@ -556,7 +603,7 @@ genomics-helpdesk@cruk.cam.ac.uk
         msg.attach(part)
 
     mail = smtplib.SMTP('smtp.cruk.cam.ac.uk')
-    out = mail.sendmail(send_from, send_to + [ANNE, SARAH, JAMES], msg.as_string())
+    out = mail.sendmail(send_from, send_to + [ANNE, JAMES], msg.as_string())
     if out:
         log.error(out)
     mail.quit()
@@ -587,6 +634,17 @@ def parse_billing_report(file_report, month):
                 data[key] = line                    
     return data
         
+
+def parse_lps_billing_report(file_report, month):
+    data = defaultdict(dict)
+    with open(file_report, "U") as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for line in reader:
+            #if line['billable'] == 'Bill' and line['billingmonth'] == month:
+            if line['billingmonth'] == month:
+                data[line['sampleid']] = line
+    return data
+
 
 def convert_runtype_into_cycles(runtype):
     if not runtype[0]:
