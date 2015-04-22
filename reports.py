@@ -25,6 +25,9 @@ from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email import Encoders
 
+# smtp server
+CRUKCI_SMTP = 'mailrelay.cruk.cam.ac.uk'
+
 # email addresses
 ANNE = 'anne.pajon@cruk.cam.ac.uk'
 JAMES = 'james.hadfield@cruk.cam.ac.uk'
@@ -564,11 +567,11 @@ def send_email(lane_number, files, month):
         part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(f))
         msg.attach(part)
 
-    s = smtplib.SMTP('smtp.cruk.cam.ac.uk')
-    out = s.sendmail(send_from, send_to, msg.as_string())
+    mail = smtplib.SMTP(CRUKCI_SMTP)
+    out = mail.sendmail(send_from, send_to, msg.as_string())
     if out:
         log.error(out)
-    s.quit()
+    mail.quit()
 
 
 def send_notification(send_to, files, month, names, institute):
@@ -602,7 +605,7 @@ genomics-helpdesk@cruk.cam.ac.uk
         part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(f))
         msg.attach(part)
 
-    mail = smtplib.SMTP('smtp.cruk.cam.ac.uk')
+    mail = smtplib.SMTP(CRUKCI_SMTP)
     out = mail.sendmail(send_from, send_to + [ANNE, JAMES], msg.as_string())
     if out:
         log.error(out)
