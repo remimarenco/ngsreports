@@ -21,7 +21,7 @@ processtype,
 processiotracker,
 outputmapping,
 artifact
-LEFT OUTER JOIN artifact_udf_view as audf1 on (audf1.artifactid=artifact.artifactid AND audf1.udfname = 'LPS - Billable'),
+LEFT OUTER JOIN artifact_udf_view as audf1 on (audf1.artifactid=artifact.artifactid AND audf1.udfname = 'LPS Billable'),
 artifact_sample_map,
 sample
 LEFT OUTER JOIN sample_udf_view as sudf1 on (sudf1.sampleid=sample.sampleid AND sudf1.udfname = 'SLX Identifier')

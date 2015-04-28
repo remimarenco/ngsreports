@@ -36,6 +36,10 @@ KAREN = 'Karen.Martin@cruk.cam.ac.uk'
 ANNIE = 'Annie.Baxter@cruk.cam.ac.uk'
 HELPDESK = 'genomics-helpdesk@cruk.cam.ac.uk'
 
+# pricing file names
+SEQ_SUMMARY_TABLE = 'PricingSummaryTable.txt'
+LPS_SUMMARY_TABLE = 'LPSPricingSummaryTable.txt'
+
 
 def pricing_version(pricing_summary_table_file):
     cmd = ["svn", "info", pricing_summary_table_file]
@@ -60,7 +64,7 @@ def main():
     parser.add_argument("--previous-report", dest="previous_report", action="store", help="path to last month sequencing billing report '/path/to/billing/report/201402-billing.csv'", required=True)
     parser.add_argument("--lpsreport", dest="lpsreport", action="store", help="path to library prep billing report '/path/to/billing/report/201402-lps-billing.csv'")
     parser.add_argument("--accounts", dest="accounts", action="store", help="path to the list of the group accounts '/path/to/billing/report/201402-account.csv'", required=True)
-    parser.add_argument("--prices", dest="prices", action="store", help="path to the pricing summary table '/path/to/PricingSummaryTable.txt'", required=True)
+    parser.add_argument("--prices", dest="prices", action="store", help="path to the pricing summary tables '/path/to/pricing'", required=True)
     parser.add_argument("--notifications", dest="notifications", action="store", help="path to the billing notification file '/path/to/BillingNotificationContacts.txt'")
     parser.add_argument("--date", dest="date", action="store", help="date to produce group reports e.g. '2014-01'", required=True)
     parser.add_argument("--outputdir", dest="outputdir", action="store", help="path to the output folder '/path/to/billing/'", required=True)
@@ -119,13 +123,22 @@ def main():
     # ----------
     # prices
     runtype_prices = defaultdict(dict)
-    with open(options.prices, "U") as f:
+    with open(os.path.join(options.prices, SEQ_SUMMARY_TABLE), "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
-            runtype_prices[line['Run Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.2)': line['Ad hoc (x1.2)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
+            runtype_prices[line['Run Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.2)': line['Ad hoc (x1.5)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
 
-    with open(options.prices, "U") as f:
+    with open(os.path.join(options.prices, SEQ_SUMMARY_TABLE), "U") as f:
         summary_prices = f.read()
+
+    lps_prices = defaultdict(dict)
+    with open(os.path.join(options.prices, LPS_SUMMARY_TABLE), "U") as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for line in reader:
+            lps_prices[line['Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.2)': line['Ad hoc (x1.5)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
+
+    with open(os.path.join(options.prices, LPS_SUMMARY_TABLE), "U") as f:
+        lps_summary_prices = f.read()
 
     # ----------
     # billing summary report
@@ -230,7 +243,7 @@ def main():
         f.write(summary_prices)
         f.write("\n")
         f.write("\n")
-        f.write(pricing_version(options.prices))
+        f.write(pricing_version(os.path.join(options.prices, SEQ_SUMMARY_TABLE)))
 
     # ----------
     # library prep billing summary report
@@ -246,13 +259,17 @@ def main():
         grand_total_spent = 0
         for group in group_accounts.keys():
             count = 0
+            cost = 0
             billing_codes = set()
             for v in lps_data.values():
                 if v['lab'] == group:
                     billing_codes.add(v['billingcode'])
                     count += 1
-            #cost = count * float(lps_prices[group_accounts[group]])
-            cost = 0.0
+                    log.debug('LPS Billable: ' + v['lpsbillable'])
+                    log.debug('Group: ' + v['lab'])
+                    log.debug('Group account: ' + group_accounts[group])
+                    log.debug('LPS prices: ' + lps_prices.__str__())
+                    cost += float(lps_prices[v['lpsbillable']][group_accounts[group]])
             summary_text += '%s\t%s\t%s\t£%.2f\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], cost, ", ".join(str(e) for e in billing_codes))
             summary_text_count += '%s\t%s\t%s\t%s\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], count, ", ".join(str(e) for e in billing_codes))
             grand_total_count += count
@@ -270,6 +287,12 @@ def main():
             f.write("\n")
             f.write("\n")
             f.write(summary_text)
+            f.write("\n")
+            f.write("\n")
+            f.write(lps_summary_prices)
+            f.write("\n")
+            f.write("\n")
+            f.write(pricing_version(os.path.join(options.prices, LPS_SUMMARY_TABLE)))
 
     # ----------
     # institute report
@@ -643,8 +666,9 @@ def parse_lps_billing_report(file_report, month):
     with open(file_report, "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
-            #if line['billable'] == 'Bill' and line['billingmonth'] == month:
-            if line['billingmonth'] == month:
+            if line['lpsbillable'].startswith('Bill') and line['billingmonth'] == month:
+                line['lpsbillable'] = line['lpsbillable'].split(' - ')[1]
+            #if line['billingmonth'] == month:
                 data[line['sampleid']] = line
     return data
 

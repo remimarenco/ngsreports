@@ -39,7 +39,7 @@ run() {
     LPS_BILLING_QUERY=$OUTPUTDIR/$BILLING_DATE-gls-lps-billing.sql
     LPS_BILLING_CSV=$OUTPUTDIR/$BILLING_DATE-lps-billing.csv
     
-    PRICES_CSV=$BASEDIR/pricing/PricingSummaryTable.txt
+    PRICES=$BASEDIR/pricing
 
     QC_TEMPLATE=$SQLDIR/gls-qc.sql
     QC_QUERY=$OUTPUTDIR/$BILLING_DATE-gls-qc.sql
@@ -55,7 +55,7 @@ run() {
     query $ACCOUNT_TEMPLATE $ACCOUNT_QUERY $ACCOUNT_CSV
 
     # write reports, comparison & send email notification
-    python $BASEDIR/reports.py --report=$BILLING_CSVOUT --previous-report=$BILLING_LASTCVSOUT --accounts=$ACCOUNT_CSV --prices=$PRICES_CSV --notifications=$NOTIFICATIONS --date=$GROUPREPORT_DATE --outputdir=$BASEDIR --email --logfile=$LOG/ngsreports.log
+    python $BASEDIR/reports.py --report=$BILLING_CSVOUT --previous-report=$BILLING_LASTCVSOUT --lpsreport=$LPS_BILLING_CSV --accounts=$ACCOUNT_CSV --prices=$PRICES --notifications=$NOTIFICATIONS --date=$GROUPREPORT_DATE --outputdir=$BASEDIR --email --logfile=$LOG/ngsreports.log
 
     # qc query
     query $QC_TEMPLATE $QC_QUERY $QC_CSVOUT
