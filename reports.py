@@ -31,9 +31,9 @@ from email import Encoders
 CRUKCI_SMTP = 'mailrelay.cruk.cam.ac.uk'
 
 # email addresses
-ANNE = 'anne.pajon@cruk.cam.ac.uk'
-JAMES = 'james.hadfield@cruk.cam.ac.uk'
-#SARAH = 'sarah.leigh-brown@cruk.cam.ac.uk'
+ANNE = 'Anne.Pajon@cruk.cam.ac.uk'
+JAMES = 'James.Hadfield@cruk.cam.ac.uk'
+FATIMAH = 'Fatimah.Bowater@cruk.cam.ac.uk'
 KAREN = 'Karen.Martin@cruk.cam.ac.uk'
 ANNIE = 'Annie.Baxter@cruk.cam.ac.uk'
 HELPDESK = 'genomics-helpdesk@cruk.cam.ac.uk'
@@ -539,7 +539,7 @@ def main():
     # ----------
     # send report by email
     if options.email:
-        send_email(new_lane_number, [options.report, comparison_report_file, billing_summary_file], options.date)
+        send_email(new_lane_number, [options.report, comparison_report_file, billing_summary_file, options.lpsreport, lps_billing_summary_file], options.date)
 
     # ----------
     # Institute billing notification
@@ -578,7 +578,7 @@ def send_email(lane_number, files, month):
     log = logger.get_custom_logger()
     msg = MIMEMultipart()
     send_from = ANNE
-    send_to = [ANNE, JAMES, KAREN, ANNIE]
+    send_to = [ANNE, JAMES, FATIMAH, KAREN, ANNIE]
 
     msg['Subject'] = 'Automatic Billing Report Notification - %s' % month
     msg['From'] = ANNE
