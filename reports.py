@@ -12,6 +12,8 @@ import argparse
 import string
 import locale
 import subprocess
+from itertools import groupby
+from operator import itemgetter
 
 locale.setlocale(locale.LC_ALL, 'en_GB.UTF-8')
 
@@ -126,7 +128,7 @@ def main():
     with open(os.path.join(options.prices, SEQ_SUMMARY_TABLE), "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
-            runtype_prices[line['Run Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.2)': line['Ad hoc (x1.5)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
+            runtype_prices[line['Run Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.5)': line['Ad hoc (x1.5)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
 
     with open(os.path.join(options.prices, SEQ_SUMMARY_TABLE), "U") as f:
         summary_prices = f.read()
@@ -135,7 +137,7 @@ def main():
     with open(os.path.join(options.prices, LPS_SUMMARY_TABLE), "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
-            lps_prices[line['Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.2)': line['Ad hoc (x1.5)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
+            lps_prices[line['Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.5)': line['Ad hoc (x1.5)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
 
     with open(os.path.join(options.prices, LPS_SUMMARY_TABLE), "U") as f:
         lps_summary_prices = f.read()
@@ -145,16 +147,16 @@ def main():
     hiseq_total_yield = 0
     miseq_total_yield = 0
     billing_codes = defaultdict(set)
+
     for key, value in data.iteritems():
         institute_sequencing_by_runtype[value['runtype']][value['institute']] += 1
         sequencing_by_runtype[value['runtype']][value['lab']] += 1
 
-        price = ''
         if value['billable'] == 'Bill':
-            price = runtype_prices[value['runtype']][group_accounts[value['lab']]]
-        billing_table_by_institute[value['institute']] += '["%s", "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s", "£%s"],' % (value['lab'], value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'], price)
-        billing_table_by_group[value['lab']] += '[ "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s"],' % (value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'])
-        
+            price = float(runtype_prices[value['runtype']][group_accounts[value['lab']]])
+        billing_table_by_institute[value['institute']] += '["%s", "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s", "£%.2f"],' % (value['lab'], value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'], price)
+        billing_table_by_group[value['lab']] += '[ "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s", "£%.2f"],' % (value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'], price)
+
         all_institutes.add(value['institute'])
         all_groups.add(value['lab'])
         if value['runtype'].lower().startswith('hiseq'):
@@ -172,7 +174,6 @@ def main():
     log.info("================================================================================")
     log.info("Billing Summary Report for %s" % options.date)
     log.info("================================================================================")
-    # ADD full today
     categories = sorted(sequencing_by_runtype.keys())
     total = defaultdict(int)
     total_count = defaultdict(int)
@@ -248,34 +249,64 @@ def main():
     # ----------
     # library prep billing summary report
     if options.lpsreport:
-        lps_data = parse_lps_billing_report(options.lpsreport, options.date)
+
+        lps_data, lps_data_groupby_project = parse_lps_billing_report(options.lpsreport, options.date)
+        # table for institute/group reports
+        lps_billing_table_by_institute = defaultdict(str)
+        lps_billing_table_by_group = defaultdict(str)
+        for v in lps_data_groupby_project.values():
+            lps_billing_table_by_institute[v[0]['institute']] += '["%s", "%s", "%s", "%s", "%s", "%s", "£%.2f", "£%.2f"], ' % (v[0]['lab'], v[0]['researcher'], v[0]['slxid'], len(v), v[0]['lpsbillable'], v[0]['billingmonth'], float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]), len(v)*float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]))
+            lps_billing_table_by_group[v[0]['lab']] += '["%s", "%s", "%s", "%s", "%s", "£%.2f", "£%.2f"], ' % (v[0]['researcher'], v[0]['slxid'], len(v), v[0]['lpsbillable'], v[0]['billingmonth'], float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]), len(v)*float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]))
+
+        lps_categories = sorted(lps_prices.keys())
         log.info("================================================================================")
         log.info("Library Prep Billing Summary Report for %s" % options.date)
         log.info("================================================================================")
-        summary_header = 'institute\tgroup\toutside_collaboration\tsamples\tbilling_codes\n'
+        summary_header = 'institute\tgroup\toutside_collaboration'
+        for cat in lps_categories:
+            summary_header += '\t%s' % cat
+        summary_header += '\ttotal\tbilling_codes\n'
         summary_text = summary_header
         summary_text_count = summary_header
-        grand_total_count = 0
-        grand_total_spent = 0
+        total_count = defaultdict(int)
+        total_spent = defaultdict(int)
         for group in group_accounts.keys():
-            count = 0
-            cost = 0
+            count = defaultdict(int)
+            cost = defaultdict(int)
             billing_codes = set()
             for v in lps_data.values():
-                if v['lab'] == group:
+                if group == v['lab']:
                     billing_codes.add(v['billingcode'])
-                    count += 1
-                    log.debug('LPS Billable: ' + v['lpsbillable'])
-                    log.debug('Group: ' + v['lab'])
-                    log.debug('Group account: ' + group_accounts[group])
-                    log.debug('LPS prices: ' + lps_prices.__str__())
-                    cost += float(lps_prices[v['lpsbillable']][group_accounts[group]])
-            summary_text += '%s\t%s\t%s\t£%.2f\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], cost, ", ".join(str(e) for e in billing_codes))
-            summary_text_count += '%s\t%s\t%s\t%s\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], count, ", ".join(str(e) for e in billing_codes))
-            grand_total_count += count
-            grand_total_spent += cost
-        summary_text += 'total\t\t\t£%.2f\n' % grand_total_spent
-        summary_text_count += 'total\t\t\t%s\n' % grand_total_count
+                    for cat in lps_categories:
+                        if cat == v['lpsbillable']:
+                            count[cat] += 1
+                            price = float(lps_prices[v['lpsbillable']][group_accounts[group]])
+                            cost[cat] += price
+
+            count_text = ''
+            cost_text = ''
+            lps_grand_total_count = 0
+            lps_grand_total_spent = 0
+            for cat in lps_categories:
+                count_text += '\t%s' % count[cat]
+                cost_text += '\t£%.2f' % cost[cat]
+                total_count[cat] += count[cat]
+                total_spent[cat] += cost[cat]
+                lps_grand_total_count += count[cat]
+                lps_grand_total_spent += cost[cat]
+            summary_text_count += '%s\t%s\t%s%s\t%s\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], count_text, lps_grand_total_count, ", ".join(str(e) for e in billing_codes))
+            summary_text += '%s\t%s\t%s%s\t£%.2f\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], cost_text, lps_grand_total_spent, ", ".join(str(e) for e in billing_codes))
+        lps_grand_total_count = 0
+        lps_grand_total_spent = 0
+        summary_text_count += 'total\t\t'
+        summary_text += 'total\t\t'
+        for cat in lps_categories:
+            summary_text_count += '\t%s' % total_count[cat]
+            summary_text += '\t£%.2f' % total_spent[cat]
+            lps_grand_total_count += total_count[cat]
+            lps_grand_total_spent += total_spent[cat]
+        summary_text_count += '\t%s\n' % lps_grand_total_count
+        summary_text += '\t£%.2f\n' % lps_grand_total_spent
         log.info(summary_text_count)
         log.info(" ")
         log.info(summary_text)
@@ -321,24 +352,14 @@ def main():
             miseq += "['%s', %s]," % (key, group_miseq_usage[institute][key])
             
         billing_table = billing_table_by_institute[institute]
-        """ 
-        { "sTitle": "Group" },
-        { "sTitle": "Researcher" },
-        { "sTitle": "SLX-ID" },
-        { "sTitle": "Run type" },
-        { "sTitle": "Flow-cell"},
-        { "sTitle": "Lane"},
-        { "sTitle": "Yield (M reads)"},
-        { "sTitle": "Billable"},
-        { "sTitle": "Billing month"}
-        """
+        lps_billing_table = lps_billing_table_by_institute[institute]
 
         filename = options.date + '-' + institute.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
         filedir = os.path.join(options.outputdir, 'institutes')
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         with open(os.path.join(filedir, filename), 'w') as f:
-            f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'date': options.date, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
+            f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'date': options.date, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table, 'lps_billing_table': lps_billing_table}))
 
     # ----------
     # group report
@@ -367,24 +388,15 @@ def main():
             miseq += "['%s', %s]," % (key, lab_member_miseq_usage[group][key])
             
         billing_table = billing_table_by_group[group]
-        """ 
-        { "sTitle": "Researcher" },
-        { "sTitle": "SLX-ID" },
-        { "sTitle": "Run type" },
-        { "sTitle": "Flow-cell"},
-        { "sTitle": "Lane"},
-        { "sTitle": "Yield (M reads)"},
-        { "sTitle": "Billable"},
-        { "sTitle": "Billing month"}
-        """
-        
+        lps_billing_table = lps_billing_table_by_group[group]
+
         filename = options.date + '-' + group.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
         filedir = os.path.join(options.outputdir, 'groups')
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         with open(os.path.join(filedir, filename), 'w') as f:
-            f.write(string.Template(group_template).safe_substitute({'categories': categories, 'group': group, 'date': options.date, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table}))
-    
+            f.write(string.Template(group_template).safe_substitute({'categories': categories, 'group': group, 'date': options.date, 'group_data': group_data, 'others_data': others_data, 'group_capacity': sum(group_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table, 'lps_billing_table': lps_billing_table}))
+
     # ----------
     # billing email report
     
@@ -663,14 +675,15 @@ def parse_billing_report(file_report, month):
 
 def parse_lps_billing_report(file_report, month):
     data = defaultdict(dict)
+    data_groupby_project = defaultdict(list)
     with open(file_report, "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
             if line['lpsbillable'].startswith('Bill') and line['billingmonth'] == month:
                 line['lpsbillable'] = line['lpsbillable'].split(' - ')[1]
-            #if line['billingmonth'] == month:
                 data[line['sampleid']] = line
-    return data
+                data_groupby_project["|".join([line['institute'], line['lab'], line['researcher'], line['lpsbillable'], line['billingmonth'], line['projectname'], line['slxid']])].append(line)
+    return data, data_groupby_project
 
 
 def convert_runtype_into_cycles(runtype):

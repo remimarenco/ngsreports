@@ -22,7 +22,7 @@ WITH billing as (
 	AND process.typeid=processtype.typeid 
 	AND processtype.displayname='Billing' 
 	AND processiotracker.inputartifactid=artifact.artifactid 
-	AND process.daterun >= '2014-04-01' AND process.daterun <= '2015-03-31'
+	AND process.daterun >= '2015-04-01' AND process.daterun <= '2016-03-31'
 )
 -- SELECT -------------------------------------------------------------------------
 SELECT distinct

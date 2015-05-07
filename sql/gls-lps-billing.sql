@@ -35,7 +35,7 @@ LEFT OUTER JOIN address on (lab.billingaddressid=address.addressid)
 WHERE process.typeid = processtype.typeid
 AND processtype.displayname='LPS Complete'
 AND process.workstatus='COMPLETE'
-AND process.daterun >= '2014-04-01' AND process.daterun <= '2015-03-31'
+AND process.daterun >= '2015-04-01' AND process.daterun <= '2016-03-31'
 AND process.processid=processiotracker.processid
 AND outputmapping.trackerid=processiotracker.trackerid
 AND outputmapping.outputartifactid=artifact.artifactid
