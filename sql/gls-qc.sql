@@ -58,7 +58,10 @@ case when itype.name = 'Hiseq' then
      when itype.name = 'Miseq' then itype.name 
      else itype.name 
 end || '_' || case when pudf2.udfvalue is null then 'SE' else 'PE' end || pudf1.udfvalue as runtype,
-
+case when sudf7.udfvalue = 'Single Read' then 'SE'
+     when sudf7.udfvalue = 'Paired End' then 'PE'
+     else '??'
+end || sudf8.udfvalue as requested_runtype,
 audf1.udfvalue as billable, 
 to_char(billing.daterun, 'YYYY-MM') as billingmonth, 
 case when pudf4.udfvalue is null then container.name else pudf4.udfvalue end as flowcellid, 
@@ -160,7 +163,7 @@ AND sample.processid=accept.sampleid
 AND sample.name NOT LIKE 'Genomics Control%'
 AND project.name != 'Controls'
 -- GROUP BY -----------------------------------------------------------------------
-GROUP BY researcher, lab, institute, slxid, runtype, billable, billingmonth, flowcellid, lane, flowcellbillingcomments, billingcomments, runfolder, 
+GROUP BY researcher, lab, institute, slxid, runtype, requested_runtype, billable, billingmonth, flowcellid, lane, flowcellbillingcomments, billingcomments, runfolder,
 instrument, submissiondate, acceptancedate, sequencingdate, publishingdate, billingdate, accept2publishdays, billing_code, library_type, index_type, 
 priority_status, yield_pf_r1, avg_q_score_r1, percent_bases_q30_r1, yield, percent_lost_reads, cluster_density_r1, percent_pf_r1, intensity_cycle_1_r1, 
 percent_intensity_cycle_20_r1, percent_phasing_r1, percent_prephasing_r1, percent_aligned_r1, percent_error_rate_r1, external
