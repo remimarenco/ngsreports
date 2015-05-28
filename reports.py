@@ -5,6 +5,7 @@ reports.py
 
 Created by Anne Pajon on 2014-01-31.
 """
+from __future__ import division
 import os
 import csv
 from collections import defaultdict
@@ -12,8 +13,6 @@ import argparse
 import string
 import locale
 import subprocess
-from itertools import groupby
-from operator import itemgetter
 
 locale.setlocale(locale.LC_ALL, 'en_GB.UTF-8')
 
@@ -73,7 +72,6 @@ def main():
     parser.add_argument("--email", dest="email", action="store_true", default=False, help="Send email to genomics with monthly billing report and comparison")
     parser.add_argument("--logfile", dest="logfile", action="store", default=None, help="File to print logging information")
     parser.add_argument("--nologemail", dest="nologemail", action="store_true", default=False, help="turn off sending log emails on error")
-    #parser.add_argument("--cumulative", dest="cumulative", action="store_true", default=False, help="Produce a cumulative report till the date entered")
 
     options = parser.parse_args()
 
@@ -82,18 +80,7 @@ def main():
 
     # ----------
     # billing and group report
-    data = parse_billing_report(options.report, options.date)
-    
-    institute_sequencing_by_runtype = defaultdict(lambda: defaultdict(int))
-    sequencing_by_runtype = defaultdict(lambda: defaultdict(int))
-    all_institutes = set()
-    all_groups = set()
-    group_hiseq_usage = defaultdict(lambda: defaultdict(int))
-    lab_member_hiseq_usage = defaultdict(lambda: defaultdict(int))
-    group_miseq_usage = defaultdict(lambda: defaultdict(int))
-    lab_member_miseq_usage = defaultdict(lambda: defaultdict(int))
-    billing_table_by_institute = defaultdict(str)
-    billing_table_by_group = defaultdict(str)
+    data, cumulative_data = parse_billing_report(options.report, options.date)
 
     # ----------
     # institute template
@@ -123,7 +110,7 @@ def main():
             institute_groups[line['group']] = line['institute']
 
     # ----------
-    # prices
+    # sequencing prices
     runtype_prices = defaultdict(dict)
     with open(os.path.join(options.prices, SEQ_SUMMARY_TABLE), "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
@@ -133,6 +120,7 @@ def main():
     with open(os.path.join(options.prices, SEQ_SUMMARY_TABLE), "U") as f:
         summary_prices = f.read()
 
+    # library preparation prices
     lps_prices = defaultdict(dict)
     with open(os.path.join(options.prices, LPS_SUMMARY_TABLE), "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
@@ -144,30 +132,25 @@ def main():
 
     # ----------
     # billing summary report
+    # institute data
+    institute_sequencing_by_runtype, all_institutes, group_hiseq_usage, group_miseq_usage, billing_table_by_institute = transform_data(data, runtype_prices, group_accounts, group_type='institute')
+    # lab data
+    sequencing_by_runtype, all_groups, lab_member_hiseq_usage, lab_member_miseq_usage, billing_table_by_group = transform_data(data, runtype_prices, group_accounts, group_type='lab')
+
+    # ----------
+    # cumulative institute billing summary report
+    cumulative_institute_sequencing_by_runtype, cumulative_all_institutes, cumulative_group_hiseq_usage, cumulative_group_miseq_usage, cumulative_billing_table_by_institute = transform_data(cumulative_data, runtype_prices, group_accounts, group_type='institute')
+
+
     hiseq_total_yield = 0
     miseq_total_yield = 0
     billing_codes = defaultdict(set)
 
     for key, value in data.iteritems():
-        institute_sequencing_by_runtype[value['runtype']][value['institute']] += 1
-        sequencing_by_runtype[value['runtype']][value['lab']] += 1
-
-        if value['billable'] == 'Bill':
-            price = float(runtype_prices[value['runtype']][group_accounts[value['lab']]])
-        billing_table_by_institute[value['institute']] += '["%s", "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s", "£%.2f"],' % (value['lab'], value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'], price)
-        billing_table_by_group[value['lab']] += '[ "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s", "£%.2f"],' % (value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'], price)
-
-        all_institutes.add(value['institute'])
-        all_groups.add(value['lab'])
         if value['runtype'].lower().startswith('hiseq'):
-            group_hiseq_usage[value['institute']][value['lab']] += int(value['cycles'])
-            lab_member_hiseq_usage[value['lab']][value['researcher']] += int(value['cycles'])
             hiseq_total_yield += value['yield_value']
         elif value['runtype'].lower().startswith('miseq'):
-            group_miseq_usage[value['institute']][value['lab']] += int(value['cycles'])
-            lab_member_miseq_usage[value['lab']][value['researcher']] += int(value['cycles'])
             miseq_total_yield += value['yield_value']
-
         if value['billingcode'] and (group_external[value['lab']] == 'False' or group_collaboration[value['lab']] == 'Y'):
             billing_codes[value['lab']].add(value['billingcode'])
 
@@ -327,39 +310,11 @@ def main():
 
     # ----------
     # institute report
-    for institute in all_institutes:
-        institute_data = []
-        others_data = []
-        for key in categories:
-            institute_value = 0
-            if institute in institute_sequencing_by_runtype[key].keys():
-                institute_value = institute_sequencing_by_runtype[key][institute]
-            others_value = 0
-            for other_institute in institute_sequencing_by_runtype[key].keys():
-                if not other_institute == institute:
-                    others_value += institute_sequencing_by_runtype[key][other_institute]
+    create_institute_reports(institute_template, options.date, options.outputdir, all_institutes, institute_sequencing_by_runtype, group_hiseq_usage, group_miseq_usage, billing_table_by_institute, lps_billing_table_by_institute, report_type='standard')
 
-            total_value = institute_value + others_value
-            institute_data.append(institute_value * 100.0 / float(total_value))
-            others_data.append(100 - institute_value * 100.0 / float(total_value))
-                
-        hiseq = ''
-        for key in group_hiseq_usage[institute].keys():
-            hiseq += "['%s', %s]," % (key, group_hiseq_usage[institute][key])
-
-        miseq = ''
-        for key in group_miseq_usage[institute].keys():
-            miseq += "['%s', %s]," % (key, group_miseq_usage[institute][key])
-            
-        billing_table = billing_table_by_institute[institute]
-        lps_billing_table = lps_billing_table_by_institute[institute]
-
-        filename = options.date + '-' + institute.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
-        filedir = os.path.join(options.outputdir, 'institutes')
-        if not os.path.exists(filedir):
-            os.makedirs(filedir)
-        with open(os.path.join(filedir, filename), 'w') as f:
-            f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'date': options.date, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table, 'lps_billing_table': lps_billing_table}))
+    # ----------
+    # institute cumulative report
+    create_institute_reports(institute_template, options.date, options.outputdir, cumulative_all_institutes, cumulative_institute_sequencing_by_runtype, cumulative_group_hiseq_usage, cumulative_group_miseq_usage, cumulative_billing_table_by_institute, lps_billing_table_by_institute, report_type='cumulative')
 
     # ----------
     # group report
@@ -559,19 +514,79 @@ def main():
                     log.info('FILE DO NOT EXISTS: ' + institute_report)
 
 
-def parse_billing_report_for_comparison(file_report):
-    data = defaultdict(list)
-    non_billable_data = defaultdict(list)
-    with open(file_report, "U") as f:
-        reader = csv.DictReader(f, delimiter='\t')
-        for line in reader:
-            if line['billable'] == 'Bill':
-                key = "%s_%s" % (line['flowcellid'], line['lane'])
-                data[key].append(';'.join([line['slxid'], line['runtype'], line['billable'], line['billingmonth'], line['flowcellid'], line['lane']]))
-            else:
-                key = "%s_%s" % (line['flowcellid'], line['lane'])
-                non_billable_data[key].append(';'.join([line['slxid'], line['runtype'], line['billable'], line['billingmonth'], line['flowcellid'], line['lane']])) 
-    return data, non_billable_data
+def create_institute_reports(institute_template, date, outputdir, all_institutes, institute_sequencing_by_runtype, group_hiseq_usage, group_miseq_usage, billing_table_by_institute, lps_billing_table_by_institute, report_type='cumulative'):
+    for institute in all_institutes:
+        institute_data = []
+        others_data = []
+        categories = sorted(institute_sequencing_by_runtype.keys())
+        for key in categories:
+            institute_value = 0
+            if institute in institute_sequencing_by_runtype[key].keys():
+                institute_value = institute_sequencing_by_runtype[key][institute]
+            others_value = 0
+            for other_institute in institute_sequencing_by_runtype[key].keys():
+                if not other_institute == institute:
+                    others_value += institute_sequencing_by_runtype[key][other_institute]
+
+            total_value = institute_value + others_value
+            institute_data.append(institute_value * 100.0 / float(total_value))
+            others_data.append(100 - institute_value * 100.0 / float(total_value))
+
+        hiseq = ''
+        for key in group_hiseq_usage[institute].keys():
+            hiseq += "['%s', %s]," % (key, group_hiseq_usage[institute][key])
+
+        miseq = ''
+        for key in group_miseq_usage[institute].keys():
+            miseq += "['%s', %s]," % (key, group_miseq_usage[institute][key])
+
+        billing_table = billing_table_by_institute[institute]
+        lps_billing_table = lps_billing_table_by_institute[institute]
+
+        if report_type == 'cumulative':
+            filename = date + '-cumulative-' + institute.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
+            text_date = 'Cumulative report from last April till %s' % date
+        else:
+            filename = date + '-' + institute.replace('/', '').replace(' ', '').replace('-', '').lower() + '.html'
+            text_date = date
+        filedir = os.path.join(outputdir, 'institutes')
+        if not os.path.exists(filedir):
+            os.makedirs(filedir)
+
+        with open(os.path.join(filedir, filename), 'w') as f:
+            f.write(string.Template(institute_template).safe_substitute({'categories': categories, 'institute': institute, 'date': text_date, 'institute_data': institute_data, 'others_data': others_data, 'institute_capacity': sum(institute_data), 'others_capacity': sum(others_data), 'hiseq': hiseq, 'miseq': miseq, 'billing_table': billing_table, 'lps_billing_table': lps_billing_table}))
+
+
+def transform_data(data, runtype_prices, group_accounts, group_type='institute'):
+
+    sequencing_by_runtype = defaultdict(lambda: defaultdict(int))
+    groups = set()
+    hiseq_usage = defaultdict(lambda: defaultdict(int))
+    miseq_usage = defaultdict(lambda: defaultdict(int))
+    billing_table = defaultdict(str)
+
+    for key, value in data.iteritems():
+
+        if value['billable'] == 'Bill':
+            price = float(runtype_prices[value['runtype']][group_accounts[value['lab']]])
+        if group_type == 'institute':
+            sequencing_by_runtype[value['runtype']][value['institute']] += 1
+            billing_table[value['institute']] += '["%s", "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s", "£%.2f"],' % (value['lab'], value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'], price)
+            groups.add(value['institute'])
+            if value['runtype'].lower().startswith('hiseq'):
+                hiseq_usage[value['institute']][value['lab']] += int(value['cycles'])
+            elif value['runtype'].lower().startswith('miseq'):
+                miseq_usage[value['institute']][value['lab']] += int(value['cycles'])
+        else:
+            sequencing_by_runtype[value['runtype']][value['lab']] += 1
+            billing_table[value['lab']] += '[ "%s", "%s", "%s", "%s", "%s" , "%s", "%s", "%s", "£%.2f"],' % (value['researcher'], value['slxid'], value['runtype'], value['flowcellid'], value['lane'], value['yield'], value['billable'], value['billingmonth'], price)
+            groups.add(value['lab'])
+            if value['runtype'].lower().startswith('hiseq'):
+                hiseq_usage[value['lab']][value['researcher']] += int(value['cycles'])
+            elif value['runtype'].lower().startswith('miseq'):
+                miseq_usage[value['lab']][value['researcher']] += int(value['cycles'])
+
+    return sequencing_by_runtype, groups, hiseq_usage, miseq_usage, billing_table
 
 
 def send_email(lane_number, files, month):
@@ -650,10 +665,11 @@ genomics-helpdesk@cruk.cam.ac.uk
 def parse_billing_report(file_report, month):
     log = logger.get_custom_logger()
     data = defaultdict(dict)
+    cumulative_data = defaultdict(dict)
     with open(file_report, "U") as f:
         reader = csv.DictReader(f, delimiter='\t')
         for line in reader:
-            if line['billable'] == 'Bill' and line['billingmonth'] == month:
+            if line['billable'] == 'Bill':
                 key = "_".join([line['flowcellid'], line['lane'], line['slxid']])
                 line['cycles'] = convert_runtype_into_cycles(line['runtype'].split('_'))
                 if line['yield']:
@@ -669,9 +685,26 @@ def parse_billing_report(file_report, month):
                         line['runtype'] = 'MiSeq_UpTo150'
                     else:
                         line['runtype'] = 'MiSeq_UpTo600'
-                data[key] = line                    
-    return data
+                if line['billingmonth'] == month:
+                    data[key] = line
+                cumulative_data[key] = line
+    return data, cumulative_data
         
+
+def parse_billing_report_for_comparison(file_report):
+    data = defaultdict(list)
+    non_billable_data = defaultdict(list)
+    with open(file_report, "U") as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for line in reader:
+            if line['billable'] == 'Bill':
+                key = "%s_%s" % (line['flowcellid'], line['lane'])
+                data[key].append(';'.join([line['slxid'], line['runtype'], line['billable'], line['billingmonth'], line['flowcellid'], line['lane']]))
+            else:
+                key = "%s_%s" % (line['flowcellid'], line['lane'])
+                non_billable_data[key].append(';'.join([line['slxid'], line['runtype'], line['billable'], line['billingmonth'], line['flowcellid'], line['lane']]))
+    return data, non_billable_data
+
 
 def parse_lps_billing_report(file_report, month):
     data = defaultdict(dict)
