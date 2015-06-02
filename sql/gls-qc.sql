@@ -136,7 +136,9 @@ LEFT OUTER JOIN sample_udf_view as sudf2 on (sudf2.sampleid=sample.sampleid AND 
 LEFT OUTER JOIN sample_udf_view as sudf3 on (sudf3.sampleid=sample.sampleid AND sudf3.udfname = 'Index Type')
 LEFT OUTER JOIN sample_udf_view as sudf4 on (sudf4.sampleid=sample.sampleid AND sudf4.udfname = 'Average Library Length')
 LEFT OUTER JOIN sample_udf_view as sudf5 on (sudf5.sampleid=sample.sampleid AND sudf5.udfname = 'Billing Information')
-LEFT OUTER JOIN sample_udf_view as sudf6 on (sudf6.sampleid=sample.sampleid AND sudf6.udfname = 'Priority Status'),
+LEFT OUTER JOIN sample_udf_view as sudf6 on (sudf6.sampleid=sample.sampleid AND sudf6.udfname = 'Priority Status')
+LEFT OUTER JOIN sample_udf_view as sudf7 on (sudf7.sampleid=sample.sampleid AND sudf7.udfname = 'Sequencing Type')
+LEFT OUTER JOIN sample_udf_view as sudf8 on (sudf8.sampleid=sample.sampleid AND sudf8.udfname = 'Read Length'),
 project, 
 researcher, 
 lab 
