@@ -685,6 +685,13 @@ def parse_billing_report(file_report, month):
                         line['runtype'] = 'MiSeq_UpTo150'
                     else:
                         line['runtype'] = 'MiSeq_UpTo600'
+                if line['runtype'].lower().startswith('nextseq'):
+                    if line['cycles'] <= 75:
+                        line['runtype'] = 'NextSeq_UpTo75'
+                    elif line['cycles'] <= 150:
+                        line['runtype'] = 'NextSeq_UpTo150'
+                    else:
+                        line['runtype'] = 'NextSeq_UpTo300'
                 if line['billingmonth'] == month:
                     data[key] = line
                 cumulative_data[key] = line
@@ -722,7 +729,7 @@ def parse_lps_billing_report(file_report, month):
 def convert_runtype_into_cycles(runtype):
     if not runtype[0]:
         return 0
-    elif runtype[0].lower().startswith('hiseq') or runtype[0].lower().startswith('miseq'):
+    elif runtype[0].lower().startswith('hiseq') or runtype[0].lower().startswith('miseq') or runtype[0].lower().startswith('nextseq'):
         if runtype[1].startswith('SE'):
             return int(runtype[1][2:])
         elif runtype[1].startswith('PE'):
