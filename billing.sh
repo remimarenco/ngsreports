@@ -10,8 +10,8 @@ query() {
 
     # run query
     export PGPASSWORD=readonly
-    psql -h lims -U readonly -d "clarityDB"  -c "COPY ( `cat $QUERY` ) TO STDOUT WITH DELIMITER AS E'\t' CSV HEADER " > $CSVOUT || echo "ERROR: Unable to run $QUERY" > $CSVOUT
-    # test - quick/simple query: psql -h lims -U readonly -d "clarityDB"  -c "COPY ( select * from researcher ) TO STDOUT WITH DELIMITER AS E'\t' CSV HEADER " > $CSVOUT
+    psql -h genomicsequencing.cruk.cam.ac.uk -U readonly -d "clarityDB"  -c "COPY ( `cat $QUERY` ) TO STDOUT WITH DELIMITER AS E'\t' CSV HEADER " > $CSVOUT || echo "ERROR: Unable to run $QUERY" > $CSVOUT
+    # test - quick/simple query: psql -h genomicsequencing.cruk.cam.ac.uk -U readonly -d "clarityDB"  -c "COPY ( select * from researcher ) TO STDOUT WITH DELIMITER AS E'\t' CSV HEADER " > $CSVOUT
 }
 
 run() {

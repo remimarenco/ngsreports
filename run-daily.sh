@@ -8,5 +8,5 @@ NGSMAILINGLIST_OUT=$BASEDIR/reports/gls-ngsmailinglist.txt
 export PGPASSWORD=readonly
 
 # ngsmailinglist ---------------------------------------------------------------
-psql -h lims -U readonly -d "clarityDB"  -c "COPY ( `cat $NGSMAILINGLIST_QUERY` ) TO STDOUT" > $NGSMAILINGLIST_OUT
+psql -h genomicsequencing.cruk.cam.ac.uk -U readonly -d "clarityDB"  -c "COPY ( `cat $NGSMAILINGLIST_QUERY` ) TO STDOUT" > $NGSMAILINGLIST_OUT
 
