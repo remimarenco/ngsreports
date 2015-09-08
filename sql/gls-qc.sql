@@ -81,6 +81,7 @@ sudf2.udfvalue as library_type,
 sudf3.udfvalue as index_type,
 to_char(avg(to_number(sudf4.udfvalue, '99999')), '9999.99') as avg_library_length,
 sudf6.udfvalue as priority_status,
+sudf9.udfvalue as workflow,
 audf3.udfvalue as yield_pf_r1,
 audf4.udfvalue as avg_q_score_r1,
 audf5.udfvalue as percent_bases_q30_r1,
@@ -138,7 +139,8 @@ LEFT OUTER JOIN sample_udf_view as sudf4 on (sudf4.sampleid=sample.sampleid AND 
 LEFT OUTER JOIN sample_udf_view as sudf5 on (sudf5.sampleid=sample.sampleid AND sudf5.udfname = 'Billing Information')
 LEFT OUTER JOIN sample_udf_view as sudf6 on (sudf6.sampleid=sample.sampleid AND sudf6.udfname = 'Priority Status')
 LEFT OUTER JOIN sample_udf_view as sudf7 on (sudf7.sampleid=sample.sampleid AND sudf7.udfname = 'Sequencing Type')
-LEFT OUTER JOIN sample_udf_view as sudf8 on (sudf8.sampleid=sample.sampleid AND sudf8.udfname = 'Read Length'),
+LEFT OUTER JOIN sample_udf_view as sudf8 on (sudf8.sampleid=sample.sampleid AND sudf8.udfname = 'Read Length')
+LEFT OUTER JOIN sample_udf_view as sudf9 on (sudf9.sampleid=sample.sampleid AND sudf9.udfname = 'Workflow'),
 project, 
 researcher, 
 lab 
@@ -167,7 +169,7 @@ AND project.name != 'Controls'
 -- GROUP BY -----------------------------------------------------------------------
 GROUP BY researcher, lab, institute, slxid, runtype, requested_runtype, billable, billingmonth, flowcellid, lane, flowcellbillingcomments, billingcomments, runfolder,
 instrument, submissiondate, acceptancedate, sequencingdate, publishingdate, billingdate, accept2publishdays, billing_code, library_type, index_type, 
-priority_status, yield_pf_r1, avg_q_score_r1, percent_bases_q30_r1, yield, percent_lost_reads, cluster_density_r1, percent_pf_r1, intensity_cycle_1_r1, 
+priority_status, workflow, yield_pf_r1, avg_q_score_r1, percent_bases_q30_r1, yield, percent_lost_reads, cluster_density_r1, percent_pf_r1, intensity_cycle_1_r1,
 percent_intensity_cycle_20_r1, percent_phasing_r1, percent_prephasing_r1, percent_aligned_r1, percent_error_rate_r1, external
 -- ORDER BY -----------------------------------------------------------------------
 ORDER BY billable, flowcellid, lane
