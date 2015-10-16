@@ -27,7 +27,7 @@ from email.MIMEBase import MIMEBase
 from email import Encoders
 
 # smtp server
-CRUKCI_SMTP = 'mailrelay.cruk.cam.ac.uk'
+CRUKCI_SMTP = 'smtp.cruk.cam.ac.uk'
 
 # email addresses
 ANNE = 'Anne.Pajon@cruk.cam.ac.uk'
@@ -231,82 +231,116 @@ def main():
 
     # ----------
     # library prep billing summary report
-    if options.lpsreport:
+    lps_data, lps_data_groupby_project = parse_lps_billing_report(options.lpsreport, options.date)
+    # table for institute/group reports
+    lps_billing_table_by_institute = defaultdict(str)
+    lps_billing_table_by_group = defaultdict(str)
+    for v in lps_data_groupby_project.values():
+        lps_billing_table_by_institute[v[0]['institute']] += '["%s", "%s", "%s", "%s", "%s", "%s", "£%.2f", "£%.2f"], ' % (v[0]['lab'], v[0]['researcher'], v[0]['slxid'], len(v), v[0]['lpsbillable'], v[0]['billingmonth'], float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]), len(v)*float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]))
+        lps_billing_table_by_group[v[0]['lab']] += '["%s", "%s", "%s", "%s", "%s", "£%.2f", "£%.2f"], ' % (v[0]['researcher'], v[0]['slxid'], len(v), v[0]['lpsbillable'], v[0]['billingmonth'], float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]), len(v)*float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]))
 
-        lps_data, lps_data_groupby_project = parse_lps_billing_report(options.lpsreport, options.date)
-        # table for institute/group reports
-        lps_billing_table_by_institute = defaultdict(str)
-        lps_billing_table_by_group = defaultdict(str)
-        for v in lps_data_groupby_project.values():
-            lps_billing_table_by_institute[v[0]['institute']] += '["%s", "%s", "%s", "%s", "%s", "%s", "£%.2f", "£%.2f"], ' % (v[0]['lab'], v[0]['researcher'], v[0]['slxid'], len(v), v[0]['lpsbillable'], v[0]['billingmonth'], float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]), len(v)*float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]))
-            lps_billing_table_by_group[v[0]['lab']] += '["%s", "%s", "%s", "%s", "%s", "£%.2f", "£%.2f"], ' % (v[0]['researcher'], v[0]['slxid'], len(v), v[0]['lpsbillable'], v[0]['billingmonth'], float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]), len(v)*float(lps_prices[v[0]['lpsbillable']][group_accounts[v[0]['lab']]]))
+    lps_categories = sorted(lps_prices.keys())
+    log.info("================================================================================")
+    log.info("Library Prep Billing Summary Report for %s" % options.date)
+    log.info("================================================================================")
+    summary_header = 'institute\tgroup\toutside_collaboration'
+    for cat in lps_categories:
+        summary_header += '\t%s' % cat
+    summary_header += '\ttotal\tbilling_codes\n'
+    summary_text = summary_header
+    summary_text_count = summary_header
+    total_count = defaultdict(int)
+    total_spent = defaultdict(int)
+    for group in group_accounts.keys():
+        count = defaultdict(int)
+        cost = defaultdict(int)
+        billing_codes = set()
+        for v in lps_data.values():
+            if group == v['lab']:
+                billing_codes.add(v['billingcode'])
+                for cat in lps_categories:
+                    if cat == v['lpsbillable']:
+                        count[cat] += 1
+                        price = float(lps_prices[v['lpsbillable']][group_accounts[group]])
+                        cost[cat] += price
 
-        lps_categories = sorted(lps_prices.keys())
-        log.info("================================================================================")
-        log.info("Library Prep Billing Summary Report for %s" % options.date)
-        log.info("================================================================================")
-        summary_header = 'institute\tgroup\toutside_collaboration'
-        for cat in lps_categories:
-            summary_header += '\t%s' % cat
-        summary_header += '\ttotal\tbilling_codes\n'
-        summary_text = summary_header
-        summary_text_count = summary_header
-        total_count = defaultdict(int)
-        total_spent = defaultdict(int)
-        for group in group_accounts.keys():
-            count = defaultdict(int)
-            cost = defaultdict(int)
-            billing_codes = set()
-            for v in lps_data.values():
-                if group == v['lab']:
-                    billing_codes.add(v['billingcode'])
-                    for cat in lps_categories:
-                        if cat == v['lpsbillable']:
-                            count[cat] += 1
-                            price = float(lps_prices[v['lpsbillable']][group_accounts[group]])
-                            cost[cat] += price
-
-            count_text = ''
-            cost_text = ''
-            lps_grand_total_count = 0
-            lps_grand_total_spent = 0
-            for cat in lps_categories:
-                count_text += '\t%s' % count[cat]
-                cost_text += '\t£%.2f' % cost[cat]
-                total_count[cat] += count[cat]
-                total_spent[cat] += cost[cat]
-                lps_grand_total_count += count[cat]
-                lps_grand_total_spent += cost[cat]
-            summary_text_count += '%s\t%s\t%s%s\t%s\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], count_text, lps_grand_total_count, ", ".join(str(e) for e in billing_codes))
-            summary_text += '%s\t%s\t%s%s\t£%.2f\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], cost_text, lps_grand_total_spent, ", ".join(str(e) for e in billing_codes))
+        count_text = ''
+        cost_text = ''
         lps_grand_total_count = 0
         lps_grand_total_spent = 0
-        summary_text_count += 'total\t\t'
-        summary_text += 'total\t\t'
         for cat in lps_categories:
-            summary_text_count += '\t%s' % total_count[cat]
-            summary_text += '\t£%.2f' % total_spent[cat]
-            lps_grand_total_count += total_count[cat]
-            lps_grand_total_spent += total_spent[cat]
-        summary_text_count += '\t%s\n' % lps_grand_total_count
-        summary_text += '\t£%.2f\n' % lps_grand_total_spent
-        log.info(summary_text_count)
-        log.info(" ")
-        log.info(summary_text)
-        log.info("================================================================================")
-        filename = options.date + '-lps-billing-summary.csv'
-        lps_billing_summary_file = os.path.join(filedir, filename)
-        with open(lps_billing_summary_file, 'w') as f:
-            f.write(summary_text_count)
-            f.write("\n")
-            f.write("\n")
-            f.write(summary_text)
-            f.write("\n")
-            f.write("\n")
-            f.write(lps_summary_prices)
-            f.write("\n")
-            f.write("\n")
-            f.write(pricing_version(os.path.join(options.prices, LPS_SUMMARY_TABLE)))
+            count_text += '\t%s' % count[cat]
+            cost_text += '\t£%.2f' % cost[cat]
+            total_count[cat] += count[cat]
+            total_spent[cat] += cost[cat]
+            lps_grand_total_count += count[cat]
+            lps_grand_total_spent += cost[cat]
+        summary_text_count += '%s\t%s\t%s%s\t%s\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], count_text, lps_grand_total_count, ", ".join(str(e) for e in billing_codes))
+        summary_text += '%s\t%s\t%s%s\t£%.2f\t[%s]\n' % (institute_groups[group], group, group_collaboration[group], cost_text, lps_grand_total_spent, ", ".join(str(e) for e in billing_codes))
+    lps_grand_total_count = 0
+    lps_grand_total_spent = 0
+    summary_text_count += 'total\t\t'
+    summary_text += 'total\t\t'
+    for cat in lps_categories:
+        summary_text_count += '\t%s' % total_count[cat]
+        summary_text += '\t£%.2f' % total_spent[cat]
+        lps_grand_total_count += total_count[cat]
+        lps_grand_total_spent += total_spent[cat]
+    summary_text_count += '\t%s\n' % lps_grand_total_count
+    summary_text += '\t£%.2f\n' % lps_grand_total_spent
+    log.info(summary_text_count)
+    log.info(" ")
+    log.info(summary_text)
+    log.info("================================================================================")
+    filename = options.date + '-lps-billing-summary.csv'
+    lps_billing_summary_file = os.path.join(filedir, filename)
+    with open(lps_billing_summary_file, 'w') as f:
+        f.write(summary_text_count)
+        f.write("\n")
+        f.write("\n")
+        f.write(summary_text)
+        f.write("\n")
+        f.write("\n")
+        f.write(lps_summary_prices)
+        f.write("\n")
+        f.write("\n")
+        f.write(pricing_version(os.path.join(options.prices, LPS_SUMMARY_TABLE)))
+
+    # ----------
+    # finance cumulative report
+    filename = options.date + '-billing-finance.csv'
+    billing_finance_file = os.path.join(filedir, filename)
+    with open(billing_finance_file, 'w') as f:
+        field_names = ['researcher', 'lab', 'institute', 'slxid', 'runtype', 'billable', 'billingmonth', 'billingcode', 'flowcellid', 'lane', 'yield', 'yield_value', 'cycles', 'cost']
+        writer = csv.DictWriter(f, fieldnames=field_names, delimiter='\t')
+        writer.writeheader()
+        for k in cumulative_data.keys():
+            cumulative_data[k]['cost'] = '£%.2f' % float(runtype_prices[cumulative_data[k]['runtype']][group_accounts[cumulative_data[k]['lab']]])
+            writer.writerow(cumulative_data[k])
+        f.write("\n")
+        f.write("\n")
+        f.write(pricing_version(os.path.join(options.prices, SEQ_SUMMARY_TABLE)))
+        f.write("\n")
+        f.write("\n")
+        f.write(summary_prices)
+
+    # ----------
+    # library prep finance cumulative report
+    filename = options.date + '-lps-billing-finance.csv'
+    lps_billing_finance_file = os.path.join(filedir, filename)
+    with open(lps_billing_finance_file, 'w') as f:
+        field_names = ['researcher', 'lab', 'institute', 'slxid', 'lpsbillable', 'billingmonth', 'billingcode', 'projectname', 'sampleid', 'samplename', 'cost']
+        writer = csv.DictWriter(f, fieldnames=field_names, delimiter='\t')
+        writer.writeheader()
+        for k in lps_data.keys():
+            lps_data[k]['cost'] = '£%.2f' % float(lps_prices[lps_data[k]['lpsbillable']][group_accounts[lps_data[k]['lab']]])
+            writer.writerow(lps_data[k])
+        f.write("\n")
+        f.write("\n")
+        f.write(pricing_version(os.path.join(options.prices, LPS_SUMMARY_TABLE)))
+        f.write("\n")
+        f.write("\n")
+        f.write(lps_summary_prices)
 
     # ----------
     # institute report
@@ -494,7 +528,7 @@ def main():
     # ----------
     # send report by email
     if options.email:
-        send_email(new_lane_number, [options.report, comparison_report_file, billing_summary_file, options.lpsreport, lps_billing_summary_file], options.date)
+        send_email(new_lane_number, [options.report, comparison_report_file, billing_finance_file, billing_summary_file, options.lpsreport, lps_billing_finance_file, lps_billing_summary_file], options.date)
 
     # ----------
     # Institute billing notification
