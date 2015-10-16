@@ -311,11 +311,18 @@ def main():
     filename = options.date + '-billing-finance.csv'
     billing_finance_file = os.path.join(filedir, filename)
     with open(billing_finance_file, 'w') as f:
-        field_names = ['researcher', 'lab', 'institute', 'slxid', 'runtype', 'billable', 'billingmonth', 'billingcode', 'flowcellid', 'lane', 'yield', 'yield_value', 'cycles', 'cost']
+        field_names = ['researcher', 'lab', 'institute', 'slxid', 'runtype', 'billable', 'billingmonth', 'billingcode', 'flowcellid', 'lane', 'yield', 'yield_value', 'cycles', 'external', 'collaboration', 'cost']
         writer = csv.DictWriter(f, fieldnames=field_names, delimiter='\t')
         writer.writeheader()
         for k in cumulative_data.keys():
             cumulative_data[k]['cost'] = '£%.2f' % float(runtype_prices[cumulative_data[k]['runtype']][group_accounts[cumulative_data[k]['lab']]])
+            if group_external[cumulative_data[k]['lab']] == 'True':
+                cumulative_data[k]['external'] = 'Y'
+            else:
+                cumulative_data[k]['external'] = 'N'
+            cumulative_data[k]['collaboration'] = group_collaboration[cumulative_data[k]['lab']]
+            if group_collaboration[cumulative_data[k]['lab']] == 'Y':
+                cumulative_data[k]['billingcode'] = cumulative_data[k]['institute']
             writer.writerow(cumulative_data[k])
         f.write("\n")
         f.write("\n")
@@ -329,11 +336,18 @@ def main():
     filename = options.date + '-lps-billing-finance.csv'
     lps_billing_finance_file = os.path.join(filedir, filename)
     with open(lps_billing_finance_file, 'w') as f:
-        field_names = ['researcher', 'lab', 'institute', 'slxid', 'lpsbillable', 'billingmonth', 'billingcode', 'projectname', 'sampleid', 'samplename', 'cost']
+        field_names = ['researcher', 'lab', 'institute', 'slxid', 'lpsbillable', 'billingmonth', 'billingcode', 'projectname', 'sampleid', 'samplename', 'external', 'collaboration', 'cost']
         writer = csv.DictWriter(f, fieldnames=field_names, delimiter='\t')
         writer.writeheader()
         for k in lps_data.keys():
             lps_data[k]['cost'] = '£%.2f' % float(lps_prices[lps_data[k]['lpsbillable']][group_accounts[lps_data[k]['lab']]])
+            if group_external[lps_data[k]['lab']] == 'True':
+                lps_data[k]['external'] = 'Y'
+            else:
+                lps_data[k]['external'] = 'N'
+            lps_data[k]['collaboration'] = group_collaboration[lps_data[k]['lab']]
+            if group_collaboration[lps_data[k]['lab']] == 'Y':
+                lps_data[k]['billingcode'] = lps_data[k]['institute']
             writer.writerow(lps_data[k])
         f.write("\n")
         f.write("\n")
