@@ -28,4 +28,4 @@ Outputs in `groups/`:
      python lab_reports.py --report=$(date +%Y%m)-billing.csv --output=groups/
      ```
           
-CRUK Cambridge Institute set up http://uk-cri-lsol03.crnet.org:8080/solexa/home/mib-cri/solexa/ngsreports/billing/
+CRUK Cambridge Institute set up http://sol-srv004.cri.camres.org/ngsreports/billing/
