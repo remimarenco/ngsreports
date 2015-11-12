@@ -60,6 +60,18 @@ def pricing_version(pricing_summary_table_file):
 
 def main():
     # get the options
+    # Options:
+    #   - report
+    #   - previous_report
+    #   - lpsreport
+    #   - accounts
+    #   - prices
+    #   - notifications
+    #   - date
+    #   - outputdir
+    #   - email
+    #   - logfile
+    #   - nologemail
     parser = argparse.ArgumentParser()
     parser.add_argument("--report", dest="report", help="path to sequencing billing report '/path/to/billing/report/201402-billing.csv'", required=True)
     parser.add_argument("--previous-report", dest="previous_report", help="path to last month sequencing billing report '/path/to/billing/report/201402-billing.csv'", required=True)
