@@ -139,12 +139,15 @@ def main():
         for line in reader:
             lps_prices[line['Type']] = {'Total Price': line['Total Price'], 'Consumables Only': line['Consumables Only'], 'Ad hoc (x1.5)': line['Ad hoc (x1.5)'], 'Commercial (x1.5)': line['Commercial (x1.5)']}
 
+    # TODO: Merge this with the previous loop to avoid parsing two times the same file
+    # First way to do it => Add each line to lps_summary_prices
     with open(os.path.join(options.prices, LPS_SUMMARY_TABLE), "U") as f:
         lps_summary_prices = f.read()
 
     # ----------
     # billing summary report
     # institute data
+    # TODO: Use a Billing object to fill its properties with the parameters (__init__?)
     institute_sequencing_by_runtype, all_institutes, group_hiseq_usage, group_miseq_usage, billing_table_by_institute = transform_data(data, runtype_prices, group_accounts, group_type='institute')
     # lab data
     sequencing_by_runtype, all_groups, lab_member_hiseq_usage, lab_member_miseq_usage, billing_table_by_group = transform_data(data, runtype_prices, group_accounts, group_type='lab')
