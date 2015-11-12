@@ -1,0 +1,13 @@
+.DS_Store
+
+# Folder containing data
+billing/
+pricing/
+
+# Logs
+errors.log
+info.log
+log.pyc
+
+# Results
+test/
