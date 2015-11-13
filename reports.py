@@ -467,12 +467,12 @@ def main():
 
     # compare billing reports & create report
     #TODO: Take a template, create an object which do the processing before include in the template
-    mytemplate = Template(
+    comparisonTemplate = Template(
         filename='./template/mako/billing_comparison_report.txt',
         default_filters=['decode.utf8'],
         input_encoding='utf-8',
         output_encoding='utf-8')
-    myTemplateWithData = mytemplate.render(
+    comparisonTemplateWithData = comparisonTemplate.render(
         date=options.date,
         hiseq_total_count=hiseq_total_count,
         hiseq_non_billable=hiseq_non_billable,
