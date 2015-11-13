@@ -3,6 +3,7 @@ ngsreports
 
 Requirements:
     - SVN installed in command line
+    - Mako
 
 _Monthly billing report_
 
