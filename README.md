@@ -1,6 +1,9 @@
 ngsreports
 ==========
 
+Requirements:
+    - SVN installed in command line
+
 _Monthly billing report_
 
 Outputs in `billing/`:
