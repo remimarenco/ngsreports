@@ -1,0 +1,104 @@
+
+Hello world!
+
+I am replacing the billing report:
+
+================================================================================
+Billing Comparison Report for ${date}
+================================================================================
+Billing Summary Report for ${date}
+--------------------------------------------------------------------------------
+THIS MONTH SUMMARY
+
+- HiSeq total number of lanes: ${hiseq_total_count}
+- HiSeq 'Do Not Bill' lanes: ${hiseq_non_billable}
+- HiSeq external lanes: ${external_hiseq_total_count}
+- HiSeq total read sum: $(hiseq_total_yield_formatted) million
+- HiSeq total charged cost: ${hiseq_total_spent_currency}
+
+- MiSeq total number of lanes: ${miseq_total_count}
+- MiSeq 'Do Not Bill' lanes: ${miseq_non_billable}
+- MiSeq external lanes: ${external_miseq_total_count}
+- MiSeq total read sum: ${miseq_total_yield_formatted}
+- MiSeq total charged cost: ${miseq_total_spent_currency}
+- Number of lanes without billable status: ${non_billable}
+- Number of lanes duplicated and billed: ${billable_dup}
+- Number of new lanes where billing month is not this month: ${billable_not_this_month}
+- Total charged number of lanes this month: ${grand_total_count}
+- Total charged value this month: ${grand_total_spent_currency}
+--------------------------------------------------------------------------------
+COMPARISON WITH LAST MONTH
+
+## key [flowcellid_lane] in last report but not found in this one
+- Lanes missing or set to 'Do not bill' since last report:
+<%
+    no_lane = True
+%>
+% for key, value in last_month_data.iteritems():
+    % if not key in this_month_data.keys():
+    key
+    <%
+        no_lane = False
+    %>
+    % endif
+% endfor
+% if no_lane:
+none
+% endif
+
+## key with value ['SLXID;run_type;billing_status;billing_month;flowcellid;lane] in last report which do not match in this one
+- Lanes changed since last report:
+<% no_lane = True %>
+% for key, value in last_month_data.iteritems():
+    % if not key in this_month_data.keys():
+        % if len(set(value).intersection(this_month_data[key])) == 0:
+        NEW: ${this_month_data[key]}
+        OLD: ${value}
+        <% no_lane = False %>
+        % endif
+    % endif
+% endfor
+% if no_lane:
+none
+% endif
+
+- Lanes duplicated and billed in this report:
+<% 
+no_lane = True
+i = 0
+%>
+% for item in dup_lanes:
+    <% 
+        no_lane = False 
+        i += 1
+    %>
+    ${i}	${item}
+% endfor
+% if no_lane:
+none
+% endif
+
+- Lanes without billable status in this report: 
+<%
+no_lane = True
+i = 0
+%>
+% for item in non_billable_lanes:
+	<%
+        no_lane = False
+        i += 1
+    %>
+    ${i}	${item}
+% endfor
+% if no_lane:
+none
+%endif
+
+- Lanes new in this report:
+<% new_lane_number = 0 %>
+% for item in new_lanes:
+    <% new_lane_number += 1 %>
+    ${new_lane_number}	${item}
+%endfor
+--------------------------------------------------------------------------------
+================================================================================

@@ -18,6 +18,8 @@ locale.setlocale(locale.LC_ALL, 'en_GB.UTF-8')
 
 # logging
 import log as logger
+# Templating
+from mako.template import Template
 
 # email modules
 import smtplib
@@ -380,7 +382,7 @@ def main():
     create_institute_reports(institute_template, options.date, options.outputdir, cumulative_all_institutes, cumulative_institute_sequencing_by_runtype, cumulative_group_hiseq_usage, cumulative_group_miseq_usage, cumulative_billing_table_by_institute, lps_billing_table_by_institute, report_type='cumulative')
 
     # ----------
-    # group report
+    # group report from lab data
     for group in all_groups:
         group_data = []
         others_data = []
@@ -464,88 +466,38 @@ def main():
                         miseq_non_billable += 1
 
     # compare billing reports & create report
-    log.info("================================================================================")
-    log.info("Billing Comparison Report for %s" % options.date)
-    log.info("================================================================================")
-    comparison_text = "Billing Summary Report for %s\n" % options.date
-    comparison_text += "--------------------------------------------------------------------------------\n"
-    comparison_text += "THIS MONTH SUMMARY\n"
-    comparison_text += "\n"
-    comparison_text += "- HiSeq total number of lanes: %s\n" % hiseq_total_count
-    comparison_text += "- HiSeq 'Do Not Bill' lanes: %s\n" % hiseq_non_billable
-    comparison_text += "- HiSeq external lanes: %s\n" % external_hiseq_total_count
-    comparison_text += "- HiSeq total read sum: %s million\n" % locale.format("%.0f", hiseq_total_yield, grouping=True)
-    comparison_text += "- HiSeq total charged cost: %s\n" % locale.currency(hiseq_total_spent, grouping=True) 
-    comparison_text += "\n"
-    comparison_text += "- MiSeq total number of lanes: %s\n" % miseq_total_count
-    comparison_text += "- MiSeq 'Do Not Bill' lanes: %s\n" % miseq_non_billable
-    comparison_text += "- MiSeq external lanes: %s\n" % external_miseq_total_count
-    comparison_text += "- MiSeq total read sum: %s million\n" % locale.format("%.0f", miseq_total_yield, grouping=True)
-    comparison_text += "- MiSeq total charged cost: %s\n" % locale.currency(miseq_total_spent, grouping=True) 
-    comparison_text += "\n"
-    comparison_text += "- Number of lanes without billable status: %s\n" % non_billable
-    comparison_text += "\n"
-    comparison_text += "- Number of lanes duplicated and billed: %s\n" % billable_dup
-    comparison_text += "\n"
-    comparison_text += "- Number of new lanes where billing month is not this month: %s\n" % billable_not_this_month
-    comparison_text += "\n"
-    comparison_text += "- Total charged number of lanes this month: %s\n" % grand_total_count
-    comparison_text += "\n"
-    comparison_text += "- Total charged value this month: %s\n" % locale.currency(grand_total_spent, grouping=True)
-    comparison_text += "\n"    
-    comparison_text += "--------------------------------------------------------------------------------\n"
-    comparison_text += "COMPARISON WITH LAST MONTH\n"
-    comparison_text += "\n"  
-    comparison_text += "- Lanes missing or set to 'Do not bill' since last report: \n"  # key [flowcellid_lane] in last report but not found in this one
-    no_lane = True
-    for key, value in last_month_data.iteritems():
-        if not key in this_month_data.keys():
-            no_lane = False
-            comparison_text += "%s\n" % key
-    if no_lane:
-        comparison_text += "none\n"
-    comparison_text += "\n"  
-    comparison_text += "- Lanes changed since last report: \n"  # key with value ['SLXID;run_type;billing_status;billing_month;flowcellid;lane] in last report which do not match in this one
-    no_lane = True
-    for key, value in last_month_data.iteritems():
-        if key in this_month_data.keys():
-            if len(set(value).intersection(this_month_data[key])) == 0:
-                no_lane = False
-                comparison_text += "---\n"
-                comparison_text += "NEW: %s\n" % this_month_data[key]
-                comparison_text += "OLD: %s\n" % value
-    if no_lane:
-        comparison_text += "none\n"
-    comparison_text += "\n"  
-    comparison_text += "- Lanes duplicated and billed in this report: \n"
-    no_lane = True
-    i = 0
-    for item in dup_lanes:
-        no_lane = False
-        i += 1
-        comparison_text += "%s\t%s\n" % (i, item)
-    if no_lane:
-        comparison_text += "none\n"
-    comparison_text += "\n"  
-    comparison_text += "- Lanes without billable status in this report: \n"
-    no_lane = True
-    i = 0
-    for item in non_billable_lanes:
-        no_lane = False
-        i += 1
-        comparison_text += "%s\t%s\n" % (i, item)
-    if no_lane:
-        comparison_text += "none\n"
-    comparison_text += "\n"
-    comparison_text += "- Lanes new in this report: \n"    
-    new_lane_number = 0
-    for item in new_lanes:
-        new_lane_number += 1
-        comparison_text += "%s\t%s\n" % (new_lane_number, item)
-    comparison_text += "--------------------------------------------------------------------------------"
-    log.info(comparison_text)
-    log.info("================================================================================")
-            
+    #TODO: Take a template, create an object which do the processing before include in the template
+    mytemplate = Template(
+        filename='./template/mako/billing_comparison_report.txt',
+        default_filters=['decode.utf8'],
+        input_encoding='utf-8',
+        output_encoding='utf-8')
+    log.info(mytemplate.render(
+        date=options.date,
+        hiseq_total_count=hiseq_total_count,
+        hiseq_non_billable=hiseq_non_billable,
+        external_hiseq_total_count=external_hiseq_total_count,
+        hiseq_total_yield_format=locale.format("%.0f", hiseq_total_yield, grouping=True),
+        hiseq_total_spent_currency=locale.currency(hiseq_total_spent, grouping=True),
+        miseq_total_count=miseq_total_count,
+        miseq_non_billable=miseq_non_billable,
+        external_miseq_total_count=external_miseq_total_count,
+        miseq_total_yield_formatted=locale.format("%.0f", miseq_total_yield, grouping=True),
+        miseq_total_spent_currency=locale.currency(miseq_total_spent, grouping=True),
+        non_billable=non_billable,
+        billable_dup=billable_dup,
+        billable_not_this_month=billable_not_this_month,
+        grand_total_count=grand_total_count,
+        grand_total_spent_currency=locale.currency(grand_total_spent, grouping=True),
+        last_month_data=last_month_data,
+        this_month_data=this_month_data,
+        dup_lanes=dup_lanes,
+        non_billable_lanes=non_billable_lanes,
+        new_lanes=new_lanes
+        )
+    )
+
+    comparison_text = ""
     filename = options.date + '-billing-comparison.txt'
     filedir = os.path.join(options.outputdir, 'summaries')
     if not os.path.exists(filedir):
@@ -553,7 +505,7 @@ def main():
     comparison_report_file = os.path.join(filedir, filename)
     with open(comparison_report_file, 'w') as f: 
         f.write(comparison_text)
-        
+
     # ----------
     # send report by email
     if options.email:
@@ -621,7 +573,6 @@ def create_institute_reports(institute_template, date, outputdir, all_institutes
 
 
 def transform_data(data, runtype_prices, group_accounts, group_type='institute'):
-
     sequencing_by_runtype = defaultdict(lambda: defaultdict(int))
     groups = set()
     hiseq_usage = defaultdict(lambda: defaultdict(int))
