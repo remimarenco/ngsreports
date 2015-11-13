@@ -498,6 +498,7 @@ def main():
 
     log.info(myTemplateWithData)
 
+    # TODO: Put this in an print function (Better in a Output objects which also manage the content of the emails)
     filename = options.date + '-billing-comparison.txt'
     filedir = os.path.join(options.outputdir, 'summaries')
     if not os.path.exists(filedir):
