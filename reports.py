@@ -472,7 +472,7 @@ def main():
         default_filters=['decode.utf8'],
         input_encoding='utf-8',
         output_encoding='utf-8')
-    log.info(mytemplate.render(
+    myTemplateWithData = mytemplate.render(
         date=options.date,
         hiseq_total_count=hiseq_total_count,
         hiseq_non_billable=hiseq_non_billable,
@@ -494,17 +494,17 @@ def main():
         dup_lanes=dup_lanes,
         non_billable_lanes=non_billable_lanes,
         new_lanes=new_lanes
-        )
     )
 
-    comparison_text = ""
+    log.info(myTemplateWithData)
+
     filename = options.date + '-billing-comparison.txt'
     filedir = os.path.join(options.outputdir, 'summaries')
     if not os.path.exists(filedir):
         os.makedirs(filedir)
     comparison_report_file = os.path.join(filedir, filename)
-    with open(comparison_report_file, 'w') as f: 
-        f.write(comparison_text)
+    with open(comparison_report_file, 'w') as f:
+        f.write(myTemplateWithData)
 
     # ----------
     # send report by email
